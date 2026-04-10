@@ -1,5 +1,5 @@
 build:
-    uvx marimo -y export session qplot.py
+	uvx marimo -y export session qplot.py
 	uvx mobuild export qplot.py src/hastyplot
 
 test:
