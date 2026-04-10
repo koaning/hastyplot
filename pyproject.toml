@@ -1,0 +1,12 @@
+[project]
+name = "hastyplot"
+version = "0.1.0"
+description = "Hasty plotting for Altair, inspired by ggplot2's qplot"
+readme = "README.md"
+authors = []
+requires-python = ">=3.12"
+dependencies = ["altair>=5"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
