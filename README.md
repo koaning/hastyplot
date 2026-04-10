@@ -46,17 +46,9 @@ qplot(cars, "Horsepower", bins=20, theme="clean")
 ```
 
 <!-- API_DOCS_START -->
-## `hastyplot.qplot.qplot`
+## `API`
 
-> function
-
-```python
-qplot(data, x: str, y: str | None = None, *, color: str | None = None, size: str | None = None, opacity: float | str = 0.7, group: str | None = None, geom: str = 'auto', smooth: str | None = None, bandwidth: float = 0.3, bins: int | None = None, facet_col: str | None = None, facet_row: str | None = None, facet_wrap: str | None = None, columns: int | None = None, width: int | None = None, height: int | None = None, title: str | None = None, subtitle: str | None = None, theme: str = 'default', actions: bool = False) -> altair.vegalite.v6.api.Chart
-```
-
-Quick plot for Altair. Inspired by ggplot2's qplot.
-
-`data` is the first argument so you can use `df.pipe(qplot, "x", "y")`.
+There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options: 
 
 **Data & axes**
 - `data` — DataFrame to plot.
@@ -89,27 +81,3 @@ Quick plot for Altair. Inspired by ggplot2's qplot.
 - `theme` — `"default"`, `"clean"`, or `"minimal"`.
 - `actions` — show the Vega-Lite export menu (default `False`).
 
-| Name | Type | Default |
-| --- | --- | --- |
-| `data` |  |  |
-| `x` | `str` |  |
-| `y` | `str | None` | `None` |
-| `color` | `str | None` | `None` |
-| `size` | `str | None` | `None` |
-| `opacity` | `float | str` | `0.7` |
-| `group` | `str | None` | `None` |
-| `geom` | `str` | `'auto'` |
-| `smooth` | `str | None` | `None` |
-| `bandwidth` | `float` | `0.3` |
-| `bins` | `int | None` | `None` |
-| `facet_col` | `str | None` | `None` |
-| `facet_row` | `str | None` | `None` |
-| `facet_wrap` | `str | None` | `None` |
-| `columns` | `int | None` | `None` |
-| `width` | `int | None` | `None` |
-| `height` | `int | None` | `None` |
-| `title` | `str | None` | `None` |
-| `subtitle` | `str | None` | `None` |
-| `theme` | `str` | `'default'` |
-| `actions` | `bool` | `False` |
-<!-- API_DOCS_END -->
