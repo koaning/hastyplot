@@ -49,3 +49,36 @@ qplot(stocks, "date", "price", geom="line", group="symbol")
 qplot(cars, "Horsepower", bins=20, theme="clean")
 ```
 
+## `API`
+
+There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options:
+
+**Data & axes**
+- `data` — DataFrame to plot.
+- `x` — column for the x-axis.
+- `y` — column for the y-axis. Omit for a histogram.
+
+**Aesthetics**
+- `color` — column to map to color.
+- `size` — column to map to point size.
+- `opacity` — a fixed float (e.g. `0.5`) or a column name.
+- `group` — column to group by *without* changing color.
+  Useful for separate lines per group in a uniform color.
+
+**Geom & smoothing**
+- `geom` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
+- `smooth` — overlay a trend line: `"loess"`, `"linear"`.
+- `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
+- `bins` — number of histogram bins. Omit for Altair's default.
+
+**Faceting**
+- `facet_col` / `facet_row` — column names for a facet grid.
+- `facet_wrap` — single column, wraps into rows.
+- `columns` — max columns before wrapping (default `3`).
+
+**Layout & appearance**
+- `width` / `height` — chart size in pixels (per panel when faceted).
+- `title` / `subtitle` — chart title and subtitle.
+- `theme` — `"default"`, `"clean"`, or `"minimal"`.
+- `actions` — show the Vega-Lite export menu (default `False`).
+
