@@ -1,6 +1,8 @@
 # hastyplot
 
-> This library is completely generated from a marimo notebook. You can inspect the full implementation/docs/demo/test suite here: 
+> This library is completely generated from a marimo notebook.
+>
+> You can inspect the full implementation/docs/demo/test suite be clicking the button below.  
 
 [![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/koaning/qplot/blob/main/qplot.py)
 
