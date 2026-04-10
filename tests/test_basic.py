@@ -1,4 +1,4 @@
-from qplot import qplot
+from hastyplot import qplot
 import altair as alt
 
 

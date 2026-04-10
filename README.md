@@ -1,9 +1,9 @@
-# qplot
+# hastyplot
 
-Quick plotting for Altair, inspired by ggplot2's `qplot`.
+Hasty plotting for Altair, inspired by ggplot2's `qplot`.
 
 ```python
-from qplot import qplot
+from hastyplot import qplot
 
 # Scatter plot
 qplot(df, "x", "y")
@@ -18,7 +18,7 @@ df.pipe(qplot, "x", "y", color="group")
 ## Install
 
 ```bash
-uv add qplot
+uv add hastyplot
 ```
 
 ## Features

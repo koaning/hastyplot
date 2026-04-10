@@ -1,3 +1,15 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "marimo",
+#     "altair>=5",
+#     "pandas",
+#     "vega-datasets",
+#     "wigglystuff>=0.3.2",
+#     "pytest==9.0.3",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.0"
@@ -35,7 +47,7 @@ def _():
     import pandas as pd
     from vega_datasets import data as vega_data
 
-    return mo, vega_data
+    return mo, pd, vega_data
 
 
 @app.cell
@@ -109,6 +121,11 @@ def _(qplot):
     return
 
 
+@app.cell
+def _():
+    return
+
+
 @app.cell(column=2, hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -133,24 +150,28 @@ def _(alt):
         x: str,
         y: str | None = None,
         *,
+        # Aesthetics
         color: str | None = None,
         size: str | None = None,
+        opacity: float | str = 0.7,
         group: str | None = None,
+        # Geom & smoothing
         geom: str = "auto",
-        title: str | None = None,
-        subtitle: str | None = None,
-        theme: str = "default",
-        actions: bool = False,
-        bins: int | None = None,
         smooth: str | None = None,
         bandwidth: float = 0.3,
-        opacity: float | str = 0.7,
+        bins: int | None = None,
+        # Faceting
         facet_col: str | None = None,
         facet_row: str | None = None,
         facet_wrap: str | None = None,
         columns: int | None = None,
+        # Layout & appearance
         width: int | None = None,
         height: int | None = None,
+        title: str | None = None,
+        subtitle: str | None = None,
+        theme: str = "default",
+        actions: bool = False,
     ) -> alt.Chart:
         """Quick plot for Altair. Inspired by ggplot2's qplot.
 
@@ -188,15 +209,15 @@ def _(alt):
         - `actions` — show the Vega-Lite export menu (default `False`).
         """
         chart = alt.Chart(data)
-    
+
         # Auto-select geom
         if geom == "auto":
             geom = "hist" if y is None else "scatter"
-    
+
         # Clean axis labels
         x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x)) if geom == "hist" else alt.X(x, title=_clean_label(x))
         y_enc = alt.Y("count()", title="count") if geom == "hist" else (alt.Y(y, title=_clean_label(y)) if y else None)
-    
+
         # Build the mark + encoding
         if geom == "scatter":
             chart = chart.mark_point(filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7).encode(x=x_enc, y=y_enc)
@@ -212,11 +233,11 @@ def _(alt):
             chart = chart.mark_boxplot().encode(x=x_enc, y=y_enc)
         else:
             raise ValueError(f"Unknown geom: {geom}")
-    
+
         # Group: splits data by a column (separate marks) but no color distinction
         if group is not None:
             chart = chart.encode(detail=alt.Detail(group))
-    
+
         # Optional encodings
         if color is not None:
             chart = chart.encode(color=alt.Color(color, title=_clean_label(color)))
@@ -224,7 +245,7 @@ def _(alt):
             chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
         if isinstance(opacity, str):
             chart = chart.encode(opacity=alt.Opacity(opacity, title=_clean_label(opacity)))
-    
+
         # Smooth: overlay a trend line
         if smooth is not None and y is not None:
             smooth_base = alt.Chart(data)
@@ -246,7 +267,7 @@ def _(alt):
             if color is not None:
                 trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
             chart = chart + trend
-    
+
         # Width and height (applied per facet panel or to whole chart)
         if width is not None or height is not None:
             props = {}
@@ -255,7 +276,7 @@ def _(alt):
             if height is not None:
                 props["height"] = height
             chart = chart.properties(**props)
-    
+
         # Faceting
         if facet_wrap is not None:
             chart = chart.facet(
@@ -269,7 +290,7 @@ def _(alt):
             chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)))
         elif facet_row is not None:
             chart = chart.facet(row=alt.Row(facet_row, title=_clean_label(facet_row)))
-    
+
         # Title + subtitle
         if title is not None:
             title_obj = alt.TitleParams(text=title, subtitle=subtitle or "")
@@ -277,15 +298,15 @@ def _(alt):
         elif subtitle is not None:
             title_obj = alt.TitleParams(text="", subtitle=subtitle)
             chart = chart.properties(title=title_obj)
-    
+
         # Embed options to control action menu
         chart = chart.properties(
             usermeta={"embedOptions": {"actions": actions}}
         )
-    
+
         # Apply theme
         chart = _apply_theme(chart, theme)
-    
+
         return chart
 
 
@@ -384,8 +405,149 @@ def _(mo):
 
 
 @app.cell
-def _():
-    ## Put pytests here. 
+def _(pd):
+    # Default test dataset with common column types
+    df_test = pd.DataFrame({
+        "x": [1, 2, 3, 4, 5],
+        "y": [4, 5, 6, 7, 8],
+        "c": ["a", "b", "a", "b", "a"],
+        "s": [10, 20, 30, 40, 50],
+        "o": [0.2, 0.4, 0.6, 0.8, 1.0],
+    })
+    return (df_test,)
+
+
+@app.cell
+def _(df_test, qplot):
+    ## Put pytests here.
+
+
+    def test_scatter_encodes_x_and_y():
+        spec = qplot(df_test, "x", "y").to_dict()
+        assert spec["mark"]["type"] == "point"
+        assert spec["encoding"]["x"]["field"] == "x"
+        assert spec["encoding"]["y"]["field"] == "y"
+
+
+    def test_histogram_when_y_omitted():
+        spec = qplot(df_test, "x").to_dict()
+        assert spec["mark"]["type"] == "bar"
+        assert "bin" in spec["encoding"]["x"]
+        assert spec["encoding"]["y"]["aggregate"] == "count"
+
+
+    def test_clean_labels_applied():
+        spec = qplot(df_test, "x", "y").to_dict()
+        assert spec["encoding"]["x"]["title"] == "x"
+        assert spec["encoding"]["y"]["title"] == "y"
+
+
+    def test_color_encoding():
+        spec = qplot(df_test, "x", "y", color="c").to_dict()
+        assert spec["encoding"]["color"]["field"] == "c"
+        assert spec["encoding"]["color"]["title"] == "c"
+
+
+    def test_size_encoding():
+        spec = qplot(df_test, "x", "y", size="s").to_dict()
+        assert spec["encoding"]["size"]["field"] == "s"
+
+
+    def test_opacity_as_column():
+        spec = qplot(df_test, "x", "y", opacity="o").to_dict()
+        assert spec["encoding"]["opacity"]["field"] == "o"
+
+
+    def test_opacity_as_float():
+        spec = qplot(df_test, "x", "y", opacity=0.3).to_dict()
+        assert spec["mark"]["opacity"] == 0.3
+
+
+    def test_group_uses_detail():
+        spec = qplot(df_test, "x", "y", geom="line", group="c").to_dict()
+        assert spec["encoding"]["detail"]["field"] == "c"
+
+
+    def test_bins_param():
+        spec = qplot(df_test, "x", bins=10).to_dict()
+        assert spec["encoding"]["x"]["bin"]["maxbins"] == 10
+
+
+    def test_title_and_subtitle():
+        spec = qplot(df_test, "x", "y", title="Hello", subtitle="World").to_dict()
+        assert spec["title"]["text"] == "Hello"
+        assert spec["title"]["subtitle"] == "World"
+
+
+    def test_actions_disabled_by_default():
+        spec = qplot(df_test, "x", "y").to_dict()
+        assert spec["usermeta"]["embedOptions"]["actions"] == False
+
+
+    def test_actions_enabled():
+        spec = qplot(df_test, "x", "y", actions=True).to_dict()
+        assert spec["usermeta"]["embedOptions"]["actions"] == True
+
+
+    def test_width_and_height():
+        spec = qplot(df_test, "x", "y", width=400, height=300).to_dict()
+        assert spec["width"] == 400
+        assert spec["height"] == 300
+
+
+    def test_smooth_adds_layer():
+        spec = qplot(df_test, "x", "y", smooth="loess").to_dict()
+        assert "layer" in spec
+        assert len(spec["layer"]) == 2
+
+
+    def test_geom_scatter():
+        assert (
+            qplot(df_test, "x", "y", geom="scatter").to_dict()["mark"]["type"]
+            == "point"
+        )
+
+
+    def test_geom_circle():
+        assert (
+            qplot(df_test, "x", "y", geom="circle").to_dict()["mark"]["type"]
+            == "circle"
+        )
+
+
+    def test_geom_line():
+        assert (
+            qplot(df_test, "x", "y", geom="line").to_dict()["mark"]["type"]
+            == "line"
+        )
+
+
+    def test_geom_bar():
+        assert (
+            qplot(df_test, "x", "y", geom="bar").to_dict()["mark"]["type"] == "bar"
+        )
+
+
+    def test_invalid_geom_raises():
+        try:
+            qplot(df_test, "x", "y", geom="nope")
+            assert False, "Should have raised"
+        except ValueError as e:
+            assert "Unknown geom" in str(e)
+
+
+    def test_invalid_theme_raises():
+        try:
+            qplot(df_test, "x", "y", theme="nope")
+            assert False, "Should have raised"
+        except ValueError as e:
+            assert "Unknown theme" in str(e)
+
+
+    def test_pipe_works():
+        spec = df_test.pipe(qplot, "x", "y", color="x").to_dict()
+        assert spec["encoding"]["color"]["field"] == "x"
+
     return
 
 
