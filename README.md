@@ -63,10 +63,8 @@ There is only one function and it is called `qplot`. In this function `data` is 
   Useful for separate lines per group in a uniform color.
 
 **Geom & smoothing**
-- `geom` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
-  Options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
-- `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
-  `"log"`, `"exp"`, `"pow"`.
+- `geom` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
+- `smooth` — overlay a trend line: `"loess"`, `"linear"`.
 - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
 - `bins` — number of histogram bins. Omit for Altair's default.
 
