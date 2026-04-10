@@ -49,10 +49,9 @@ qplot(stocks, "date", "price", geom="line", group="symbol")
 qplot(cars, "Horsepower", bins=20, theme="clean")
 ```
 
-<!-- API_DOCS_START -->
 ## `API`
 
-There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options: 
+There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options:
 
 **Data & axes**
 - `data` — DataFrame to plot.
