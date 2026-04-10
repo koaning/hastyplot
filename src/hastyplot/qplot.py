@@ -13,24 +13,28 @@ def qplot(
     x: str,
     y: str | None = None,
     *,
+    # Aesthetics
     color: str | None = None,
     size: str | None = None,
+    opacity: float | str = 0.7,
     group: str | None = None,
+    # Geom & smoothing
     geom: str = "auto",
-    title: str | None = None,
-    subtitle: str | None = None,
-    theme: str = "default",
-    actions: bool = False,
-    bins: int | None = None,
     smooth: str | None = None,
     bandwidth: float = 0.3,
-    opacity: float | str = 0.7,
+    bins: int | None = None,
+    # Faceting
     facet_col: str | None = None,
     facet_row: str | None = None,
     facet_wrap: str | None = None,
     columns: int | None = None,
+    # Layout & appearance
     width: int | None = None,
     height: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    theme: str = "default",
+    actions: bool = False,
 ) -> alt.Chart:
     """Quick plot for Altair. Inspired by ggplot2's qplot.
 
