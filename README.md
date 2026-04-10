@@ -49,6 +49,18 @@ qplot(stocks, "date", "price", geom="line", group="symbol")
 qplot(cars, "Horsepower", bins=20, theme="clean")
 ```
 
+## Themes
+
+Pass the `theme` parameter to change the look of any chart:
+
+```python
+qplot(df, "x", "y", theme="clean")
+```
+
+- **`"default"`** — Altair's built-in styling, no customization applied.
+- **`"clean"`** — No gridlines, dark axis colors, `system-ui` fonts, bold title.
+- **`"minimal"`** — Light gridlines, no axis domain lines, Libre Franklin / Helvetica Neue fonts, bottom-oriented legend, and a custom color palette.
+
 ## `API`
 
 There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options:
