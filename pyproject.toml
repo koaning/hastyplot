@@ -1,6 +1,6 @@
 [project]
 name = "hastyplot"
-version = "0.1.0"
+version = "0.2.0"
 description = "Hasty plotting for Altair, inspired by ggplot2's qplot"
 readme = "README.md"
 authors = []
@@ -10,3 +10,13 @@ dependencies = ["altair>=5"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[project.urls]
+Homepage = "https://github.com/koaning/hastyplot"
+Repository = "https://github.com/koaning/hastyplot"
+Issues = "https://github.com/koaning/hastyplot/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

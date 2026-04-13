@@ -12,17 +12,17 @@
 
 import marimo
 
-__generated_with = "0.23.0"
+__generated_with = "0.23.1"
 app = marimo.App(width="columns")
 
 
 @app.cell(column=0, hide_code=True)
 def _(mo):
     mo.md(r"""
-    # qplot
+    # `from hastyplot import qplot`
 
-    This notebook contains the full definition of `qplot` -- a quick plotting function for Altair,
-    inspired by ggplot2's `qplot`.
+    This notebook contains the full definition of `qplot` from the `hastyplot` library. It's a quick plotting function for Altair,
+    inspired by ggplot2's `qplot`. It is also a library that is fully developed in [marimo](https://marimo.io/gallery).
 
     ## The Setup
 
@@ -61,9 +61,7 @@ def _(vega_data):
 @app.cell
 def _(mo):
     theme_dropdown = mo.ui.dropdown(
-        options=["default", "clean", "minimal"],
-        value="minimal",
-        label="Theme"
+        options=["default", "clean", "minimal"], value="minimal", label="Theme"
     )
     theme_dropdown
     return (theme_dropdown,)
@@ -73,33 +71,112 @@ def _(mo):
 def _(cars, mo, qplot, theme_dropdown):
     _t = theme_dropdown.value
 
-    _top = mo.hstack([
-        qplot(cars, "Horsepower", "Miles_per_Gallon", color="Origin",
-              title="HP vs MPG", subtitle="With loess smooth per group",
-              theme=_t, smooth="loess"),
-        qplot(cars, "Origin", "Miles_per_Gallon", geom="boxplot",
-              title="MPG by Origin", theme=_t),
-        qplot(cars, "Horsepower", title="Distribution of Horsepower", theme=_t),
-    ], widths="equal")
+    _top = mo.hstack(
+        [
+            qplot(
+                cars,
+                "Horsepower",
+                "Miles_per_Gallon",
+                color="Origin",
+                title="HP vs MPG",
+                subtitle="With loess smooth per group",
+                theme=_t,
+                smooth="loess",
+            ),
+            qplot(
+                cars, "Origin", "Miles_per_Gallon", geom="boxplot", title="MPG by Origin", theme=_t
+            ),
+            qplot(cars, "Horsepower", title="Distribution of Horsepower", theme=_t),
+        ],
+        widths="equal",
+    )
 
     _top
     return
 
 
 @app.cell
+def _(theme_dropdown):
+    theme_dropdown
+    return
+
+
+@app.cell
+def _(cars, qplot, theme_dropdown):
+    qplot(
+        cars,
+        x="Horsepower",
+        y="Miles_per_Gallon",
+        geom="circle",
+        color="Origin",
+        facet_col="Origin",
+        title="facet_col",
+        subtitle="Notice how we can split here?",
+        width=150,
+        height=150,
+        theme=theme_dropdown.value,
+    )
+    return
+
+
+@app.cell
+def _(theme_dropdown):
+    theme_dropdown
+    return
+
+
+@app.cell
+def _(cars, qplot, theme_dropdown):
+    qplot(
+        cars,
+        "Horsepower",
+        "Miles_per_Gallon",
+        geom="circle",
+        facet_wrap="Cylinders",
+        columns=3,
+        title="facet_wrap",
+        width=150,
+        height=150,
+        theme=theme_dropdown.value,
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    All the marimo tricks also still work, because it is *just* an altair chart that comes out.
+    """)
+    return
+
+
+@app.cell
+def _(theme_dropdown):
+    theme_dropdown
+    return
+
+
+@app.cell
 def _(cars, mo, qplot, theme_dropdown):
-    _t = theme_dropdown.value
+    _chart = qplot(
+        cars,
+        "Horsepower",
+        "Miles_per_Gallon",
+        color="Origin",
+        title="HP vs MPG",
+        subtitle="With loess smooth per group",
+        theme=theme_dropdown.value,
+        smooth="loess",
+    )
 
-    _facets = mo.hstack([
-        qplot(cars, "Horsepower", "Miles_per_Gallon", geom="circle",
-              color="Origin", facet_col="Origin",
-              title="facet_col", width=150, height=150, theme=_t),
-        qplot(cars, "Horsepower", "Miles_per_Gallon", geom="circle",
-              facet_wrap="Cylinders", columns=2,
-              title="facet_wrap", width=150, height=150, theme=_t),
-    ])
+    chart = mo.ui.altair_chart(_chart)
+    chart
+    return (chart,)
 
-    _facets
+
+@app.cell
+def _(chart):
+    chart.value
     return
 
 
@@ -139,6 +216,7 @@ def _(mo):
 @app.cell
 def _(alt):
     ## EXPORT
+
 
     def _clean_label(name):
         """Lowercase and replace -/_ with spaces."""
@@ -215,14 +293,26 @@ def _(alt):
             geom = "hist" if y is None else "scatter"
 
         # Clean axis labels
-        x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x)) if geom == "hist" else alt.X(x, title=_clean_label(x))
-        y_enc = alt.Y("count()", title="count") if geom == "hist" else (alt.Y(y, title=_clean_label(y)) if y else None)
+        x_enc = (
+            alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x))
+            if geom == "hist"
+            else alt.X(x, title=_clean_label(x))
+        )
+        y_enc = (
+            alt.Y("count()", title="count")
+            if geom == "hist"
+            else (alt.Y(y, title=_clean_label(y)) if y else None)
+        )
 
         # Build the mark + encoding
         if geom == "scatter":
-            chart = chart.mark_point(filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7).encode(x=x_enc, y=y_enc)
+            chart = chart.mark_point(
+                filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+            ).encode(x=x_enc, y=y_enc)
         elif geom == "circle":
-            chart = chart.mark_circle(opacity=opacity if isinstance(opacity, (int, float)) else 0.7).encode(x=x_enc, y=y_enc)
+            chart = chart.mark_circle(
+                opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+            ).encode(x=x_enc, y=y_enc)
         elif geom == "hist":
             chart = chart.mark_bar().encode(x=x_enc, y=y_enc)
         elif geom == "line":
@@ -252,15 +342,13 @@ def _(alt):
             groupby = [color] if color is not None else []
             if smooth == "loess":
                 trend = (
-                    smooth_base
-                    .transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
+                    smooth_base.transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
                     .mark_line(strokeWidth=3, opacity=0.9)
                     .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
                 )
             else:
                 trend = (
-                    smooth_base
-                    .transform_regression(x, y, method=smooth, groupby=groupby)
+                    smooth_base.transform_regression(x, y, method=smooth, groupby=groupby)
                     .mark_line(strokeWidth=3, opacity=0.9)
                     .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
                 )
@@ -284,8 +372,10 @@ def _(alt):
                 columns=columns or 3,
             )
         elif facet_col is not None and facet_row is not None:
-            chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)),
-                                row=alt.Row(facet_row, title=_clean_label(facet_row)))
+            chart = chart.facet(
+                column=alt.Column(facet_col, title=_clean_label(facet_col)),
+                row=alt.Row(facet_row, title=_clean_label(facet_row)),
+            )
         elif facet_col is not None:
             chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)))
         elif facet_row is not None:
@@ -300,9 +390,7 @@ def _(alt):
             chart = chart.properties(title=title_obj)
 
         # Embed options to control action menu
-        chart = chart.properties(
-            usermeta={"embedOptions": {"actions": actions}}
-        )
+        chart = chart.properties(usermeta={"embedOptions": {"actions": actions}})
 
         # Apply theme
         chart = _apply_theme(chart, theme)
@@ -312,13 +400,13 @@ def _(alt):
 
     _TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
 
+
     def _apply_theme(chart, theme):
         if theme == "default":
             return chart
         elif theme == "clean":
             return (
-                chart
-                .configure_axis(
+                chart.configure_axis(
                     grid=False,
                     domainColor="#333",
                     tickColor="#333",
@@ -331,22 +419,26 @@ def _(alt):
                 )
                 .configure_view(strokeWidth=0)
                 .configure_title(
-                    fontSize=18, fontWeight="bold",
-                    font="system-ui", subtitleFont="system-ui",
-                    subtitleFontSize=13, subtitleColor="#666",
+                    fontSize=18,
+                    fontWeight="bold",
+                    font="system-ui",
+                    subtitleFont="system-ui",
+                    subtitleFontSize=13,
+                    subtitleColor="#666",
                     color="#1a1a1a",
                     **_TITLE_COMMON,
                 )
                 .configure_legend(
-                    labelFont="system-ui", titleFont="system-ui",
-                    labelFontSize=11, titleFontSize=11,
+                    labelFont="system-ui",
+                    titleFont="system-ui",
+                    labelFontSize=11,
+                    titleFontSize=11,
                     symbolSize=80,
                 )
             )
         elif theme == "minimal":
             return (
-                chart
-                .configure_axis(
+                chart.configure_axis(
                     grid=True,
                     gridColor="#e5e5e5",
                     gridWidth=0.5,
@@ -363,11 +455,13 @@ def _(alt):
                 )
                 .configure_view(strokeWidth=0)
                 .configure_title(
-                    fontSize=20, fontWeight=700,
+                    fontSize=20,
+                    fontWeight=700,
                     font="'Libre Franklin', 'Helvetica Neue', sans-serif",
                     color="#1a1a1a",
                     subtitleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                    subtitleFontSize=14, subtitleColor="#888",
+                    subtitleFontSize=14,
+                    subtitleColor="#888",
                     subtitleFontWeight="normal",
                     subtitlePadding=4,
                     **_TITLE_COMMON,
@@ -375,13 +469,25 @@ def _(alt):
                 .configure_legend(
                     labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
                     titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                    labelFontSize=11, titleFontSize=11,
+                    labelFontSize=11,
+                    titleFontSize=11,
                     titleFontWeight="normal",
-                    symbolSize=80, orient="bottom",
+                    symbolSize=80,
+                    orient="bottom",
                 )
                 .configure_range(
-                    category=["#e15759", "#4e79a7", "#f28e2b", "#76b7b2", "#59a14f",
-                               "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac"]
+                    category=[
+                        "#e15759",
+                        "#4e79a7",
+                        "#f28e2b",
+                        "#76b7b2",
+                        "#59a14f",
+                        "#edc948",
+                        "#b07aa1",
+                        "#ff9da7",
+                        "#9c755f",
+                        "#bab0ac",
+                    ]
                 )
             )
         else:
@@ -407,13 +513,15 @@ def _(mo):
 @app.cell
 def _(pd):
     # Default test dataset with common column types
-    df_test = pd.DataFrame({
-        "x": [1, 2, 3, 4, 5],
-        "y": [4, 5, 6, 7, 8],
-        "c": ["a", "b", "a", "b", "a"],
-        "s": [10, 20, 30, 40, 50],
-        "o": [0.2, 0.4, 0.6, 0.8, 1.0],
-    })
+    df_test = pd.DataFrame(
+        {
+            "x": [1, 2, 3, 4, 5],
+            "y": [4, 5, 6, 7, 8],
+            "c": ["a", "b", "a", "b", "a"],
+            "s": [10, 20, 30, 40, 50],
+            "o": [0.2, 0.4, 0.6, 0.8, 1.0],
+        }
+    )
     return (df_test,)
 
 
@@ -502,30 +610,19 @@ def _(df_test, qplot):
 
 
     def test_geom_scatter():
-        assert (
-            qplot(df_test, "x", "y", geom="scatter").to_dict()["mark"]["type"]
-            == "point"
-        )
+        assert qplot(df_test, "x", "y", geom="scatter").to_dict()["mark"]["type"] == "point"
 
 
     def test_geom_circle():
-        assert (
-            qplot(df_test, "x", "y", geom="circle").to_dict()["mark"]["type"]
-            == "circle"
-        )
+        assert qplot(df_test, "x", "y", geom="circle").to_dict()["mark"]["type"] == "circle"
 
 
     def test_geom_line():
-        assert (
-            qplot(df_test, "x", "y", geom="line").to_dict()["mark"]["type"]
-            == "line"
-        )
+        assert qplot(df_test, "x", "y", geom="line").to_dict()["mark"]["type"] == "line"
 
 
     def test_geom_bar():
-        assert (
-            qplot(df_test, "x", "y", geom="bar").to_dict()["mark"]["type"] == "bar"
-        )
+        assert qplot(df_test, "x", "y", geom="bar").to_dict()["mark"]["type"] == "bar"
 
 
     def test_invalid_geom_raises():
@@ -548,6 +645,11 @@ def _(df_test, qplot):
         spec = df_test.pipe(qplot, "x", "y", color="x").to_dict()
         assert spec["encoding"]["color"]["field"] == "x"
 
+    return
+
+
+@app.cell(column=4)
+def _():
     return
 
 

@@ -78,14 +78,26 @@ def qplot(
         geom = "hist" if y is None else "scatter"
 
     # Clean axis labels
-    x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x)) if geom == "hist" else alt.X(x, title=_clean_label(x))
-    y_enc = alt.Y("count()", title="count") if geom == "hist" else (alt.Y(y, title=_clean_label(y)) if y else None)
+    x_enc = (
+        alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x))
+        if geom == "hist"
+        else alt.X(x, title=_clean_label(x))
+    )
+    y_enc = (
+        alt.Y("count()", title="count")
+        if geom == "hist"
+        else (alt.Y(y, title=_clean_label(y)) if y else None)
+    )
 
     # Build the mark + encoding
     if geom == "scatter":
-        chart = chart.mark_point(filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7).encode(x=x_enc, y=y_enc)
+        chart = chart.mark_point(
+            filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+        ).encode(x=x_enc, y=y_enc)
     elif geom == "circle":
-        chart = chart.mark_circle(opacity=opacity if isinstance(opacity, (int, float)) else 0.7).encode(x=x_enc, y=y_enc)
+        chart = chart.mark_circle(
+            opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+        ).encode(x=x_enc, y=y_enc)
     elif geom == "hist":
         chart = chart.mark_bar().encode(x=x_enc, y=y_enc)
     elif geom == "line":
@@ -115,15 +127,13 @@ def qplot(
         groupby = [color] if color is not None else []
         if smooth == "loess":
             trend = (
-                smooth_base
-                .transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
+                smooth_base.transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
                 .mark_line(strokeWidth=3, opacity=0.9)
                 .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
             )
         else:
             trend = (
-                smooth_base
-                .transform_regression(x, y, method=smooth, groupby=groupby)
+                smooth_base.transform_regression(x, y, method=smooth, groupby=groupby)
                 .mark_line(strokeWidth=3, opacity=0.9)
                 .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
             )
@@ -147,8 +157,10 @@ def qplot(
             columns=columns or 3,
         )
     elif facet_col is not None and facet_row is not None:
-        chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)),
-                            row=alt.Row(facet_row, title=_clean_label(facet_row)))
+        chart = chart.facet(
+            column=alt.Column(facet_col, title=_clean_label(facet_col)),
+            row=alt.Row(facet_row, title=_clean_label(facet_row)),
+        )
     elif facet_col is not None:
         chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)))
     elif facet_row is not None:
@@ -163,9 +175,7 @@ def qplot(
         chart = chart.properties(title=title_obj)
 
     # Embed options to control action menu
-    chart = chart.properties(
-        usermeta={"embedOptions": {"actions": actions}}
-    )
+    chart = chart.properties(usermeta={"embedOptions": {"actions": actions}})
 
     # Apply theme
     chart = _apply_theme(chart, theme)
@@ -175,13 +185,13 @@ def qplot(
 
 _TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
 
+
 def _apply_theme(chart, theme):
     if theme == "default":
         return chart
     elif theme == "clean":
         return (
-            chart
-            .configure_axis(
+            chart.configure_axis(
                 grid=False,
                 domainColor="#333",
                 tickColor="#333",
@@ -194,22 +204,26 @@ def _apply_theme(chart, theme):
             )
             .configure_view(strokeWidth=0)
             .configure_title(
-                fontSize=18, fontWeight="bold",
-                font="system-ui", subtitleFont="system-ui",
-                subtitleFontSize=13, subtitleColor="#666",
+                fontSize=18,
+                fontWeight="bold",
+                font="system-ui",
+                subtitleFont="system-ui",
+                subtitleFontSize=13,
+                subtitleColor="#666",
                 color="#1a1a1a",
                 **_TITLE_COMMON,
             )
             .configure_legend(
-                labelFont="system-ui", titleFont="system-ui",
-                labelFontSize=11, titleFontSize=11,
+                labelFont="system-ui",
+                titleFont="system-ui",
+                labelFontSize=11,
+                titleFontSize=11,
                 symbolSize=80,
             )
         )
     elif theme == "minimal":
         return (
-            chart
-            .configure_axis(
+            chart.configure_axis(
                 grid=True,
                 gridColor="#e5e5e5",
                 gridWidth=0.5,
@@ -226,11 +240,13 @@ def _apply_theme(chart, theme):
             )
             .configure_view(strokeWidth=0)
             .configure_title(
-                fontSize=20, fontWeight=700,
+                fontSize=20,
+                fontWeight=700,
                 font="'Libre Franklin', 'Helvetica Neue', sans-serif",
                 color="#1a1a1a",
                 subtitleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                subtitleFontSize=14, subtitleColor="#888",
+                subtitleFontSize=14,
+                subtitleColor="#888",
                 subtitleFontWeight="normal",
                 subtitlePadding=4,
                 **_TITLE_COMMON,
@@ -238,13 +254,25 @@ def _apply_theme(chart, theme):
             .configure_legend(
                 labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
                 titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                labelFontSize=11, titleFontSize=11,
+                labelFontSize=11,
+                titleFontSize=11,
                 titleFontWeight="normal",
-                symbolSize=80, orient="bottom",
+                symbolSize=80,
+                orient="bottom",
             )
             .configure_range(
-                category=["#e15759", "#4e79a7", "#f28e2b", "#76b7b2", "#59a14f",
-                           "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac"]
+                category=[
+                    "#e15759",
+                    "#4e79a7",
+                    "#f28e2b",
+                    "#76b7b2",
+                    "#59a14f",
+                    "#edc948",
+                    "#b07aa1",
+                    "#ff9da7",
+                    "#9c755f",
+                    "#bab0ac",
+                ]
             )
         )
     else:
