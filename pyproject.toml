@@ -11,6 +11,11 @@ dependencies = ["altair>=5"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 
+[project.urls]
+Homepage = "https://github.com/koaning/hastyplot"
+Repository = "https://github.com/koaning/hastyplot"
+Issues = "https://github.com/koaning/hastyplot/issues"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
