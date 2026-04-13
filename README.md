@@ -4,7 +4,7 @@
 >
 > You can inspect the full implementation/docs/demo/test suite be clicking the button below.  
 
-[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/koaning/qplot/blob/main/qplot.py)
+[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/koaning/qplot/blob/main/qplot.py/wasm)
 
 Hasty plotting for Altair, inspired by ggplot2's `qplot`.
 
