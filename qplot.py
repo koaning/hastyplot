@@ -55,7 +55,7 @@ def _(vega_data):
     # Load sample datasets
     cars = vega_data.cars()
     stocks = vega_data.stocks()
-    return (cars,)
+    return cars, stocks
 
 
 @app.cell
@@ -139,6 +139,12 @@ def _(cars, qplot, theme_dropdown):
 
 
 @app.cell
+def _(theme_dropdown):
+    theme_dropdown
+    return
+
+
+@app.cell
 def _(cars, mo, qplot, theme_dropdown):
     mo.hstack(
         [
@@ -157,6 +163,43 @@ def _(cars, mo, qplot, theme_dropdown):
                 "Horsepower",
                 "Miles_per_Gallon",
                 title="Without axis limits",
+                theme=theme_dropdown.value,
+            ),
+        ],
+        widths="equal",
+    )
+    return
+
+
+@app.cell
+def _(cars, mo, qplot, stocks, theme_dropdown):
+    mo.hstack(
+        [
+            qplot(
+                stocks,
+                "date",
+                "price",
+                geom="area",
+                color="symbol",
+                title="Area",
+                theme=theme_dropdown.value,
+            ),
+            qplot(
+                stocks,
+                "date",
+                "price",
+                geom="step",
+                color="symbol",
+                title="Step",
+                theme=theme_dropdown.value,
+            ),
+            qplot(
+                cars,
+                "Horsepower",
+                "Miles_per_Gallon",
+                tooltip=["Name", "Origin"],
+                title="Tooltip",
+                subtitle="Hover to see name and origin",
                 theme=theme_dropdown.value,
             ),
         ],
@@ -256,6 +299,7 @@ def _(alt):
         size: str | None = None,
         opacity: float | str = 0.7,
         group: str | None = None,
+        tooltip: list[str] | None = None,
         # Geom & smoothing
         geom: str = "auto",
         smooth: str | None = None,
@@ -291,10 +335,11 @@ def _(alt):
         - `opacity` — a fixed float (e.g. `0.5`) or a column name.
         - `group` — column to group by *without* changing color.
           Useful for separate lines per group in a uniform color.
+        - `tooltip` — list of column names to show on hover (e.g. `["col_a", "col_b"]`).
 
         **Geom & smoothing**
         - `geom` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
-          Options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
+          Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
         - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
           `"log"`, `"exp"`, `"pow"`.
         - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
@@ -349,6 +394,12 @@ def _(alt):
             chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
         elif geom == "bar":
             chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
+        elif geom == "area":
+            chart = chart.mark_area(
+                opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
+            ).encode(x=x_enc, y=y_enc)
+        elif geom == "step":
+            chart = chart.mark_line(interpolate="step", strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
         elif geom == "boxplot":
             chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
         else:
@@ -365,6 +416,10 @@ def _(alt):
             chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
         if isinstance(opacity, str):
             chart = chart.encode(opacity=alt.Opacity(opacity, title=_clean_label(opacity)))
+        if tooltip is not None:
+            chart = chart.encode(
+                tooltip=[alt.Tooltip(col, title=_clean_label(col)) for col in tooltip]
+            )
 
         # Smooth: overlay a trend line
         if smooth is not None and y is not None:
@@ -669,6 +724,34 @@ def _(df_test, qplot):
             assert False, "Should have raised"
         except ValueError as e:
             assert "Unknown theme" in str(e)
+
+
+    def test_geom_area():
+        spec = qplot(df_test, "x", "y", geom="area").to_dict()
+        assert spec["mark"]["type"] == "area"
+
+
+    def test_geom_area_respects_opacity():
+        spec = qplot(df_test, "x", "y", geom="area", opacity=0.5).to_dict()
+        assert spec["mark"]["opacity"] == 0.5
+
+
+    def test_geom_step():
+        spec = qplot(df_test, "x", "y", geom="step").to_dict()
+        assert spec["mark"]["type"] == "line"
+        assert spec["mark"]["interpolate"] == "step"
+        assert spec["mark"]["strokeWidth"] == 2
+
+
+    def test_tooltip_encoding():
+        spec = qplot(df_test, "x", "y", tooltip=["x", "y", "c"]).to_dict()
+        tooltip_fields = [t["field"] for t in spec["encoding"]["tooltip"]]
+        assert tooltip_fields == ["x", "y", "c"]
+
+
+    def test_tooltip_none_by_default():
+        spec = qplot(df_test, "x", "y").to_dict()
+        assert "tooltip" not in spec["encoding"]
 
 
     def test_pipe_works():
