@@ -18,6 +18,7 @@ def qplot(
     size: str | None = None,
     opacity: float | str = 0.7,
     group: str | None = None,
+    tooltip: list[str] | None = None,
     # Geom & smoothing
     geom: str = "auto",
     smooth: str | None = None,
@@ -53,10 +54,11 @@ def qplot(
     - `opacity` — a fixed float (e.g. `0.5`) or a column name.
     - `group` — column to group by *without* changing color.
       Useful for separate lines per group in a uniform color.
+    - `tooltip` — list of column names to show on hover (e.g. `["col_a", "col_b"]`).
 
     **Geom & smoothing**
     - `geom` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
-      Options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
+      Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
     - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
       `"log"`, `"exp"`, `"pow"`.
     - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
@@ -111,6 +113,12 @@ def qplot(
         chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
     elif geom == "bar":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
+    elif geom == "area":
+        chart = chart.mark_area(
+            opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
+        ).encode(x=x_enc, y=y_enc)
+    elif geom == "step":
+        chart = chart.mark_line(interpolate="step", strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
     elif geom == "boxplot":
         chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
     else:
@@ -127,6 +135,10 @@ def qplot(
         chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
     if isinstance(opacity, str):
         chart = chart.encode(opacity=alt.Opacity(opacity, title=_clean_label(opacity)))
+    if tooltip is not None:
+        chart = chart.encode(
+            tooltip=[alt.Tooltip(col, title=_clean_label(col)) for col in tooltip]
+        )
 
     # Smooth: overlay a trend line
     if smooth is not None and y is not None:

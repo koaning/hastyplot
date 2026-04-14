@@ -1,6 +1,6 @@
 [project]
 name = "hastyplot"
-version = "0.2.0"
+version = "0.2.1"
 description = "Hasty plotting for Altair, inspired by ggplot2's qplot"
 readme = "README.md"
 authors = []
