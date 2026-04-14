@@ -19,8 +19,8 @@ def qplot(
     opacity: float | str = 0.7,
     group: str | None = None,
     tooltip: list[str] | None = None,
-    # Geom & smoothing
-    geom: str = "auto",
+    # Mark & smoothing
+    mark: str = "auto",
     smooth: str | None = None,
     bandwidth: float = 0.3,
     bins: int | None = None,
@@ -56,8 +56,8 @@ def qplot(
       Useful for separate lines per group in a uniform color.
     - `tooltip` — list of column names to show on hover (e.g. `["col_a", "col_b"]`).
 
-    **Geom & smoothing**
-    - `geom` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
+    **Mark & smoothing**
+    - `mark` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
       Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
     - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
       `"log"`, `"exp"`, `"pow"`.
@@ -79,9 +79,9 @@ def qplot(
     """
     chart = alt.Chart(data)
 
-    # Auto-select geom
-    if geom == "auto":
-        geom = "hist" if y is None else "scatter"
+    # Auto-select mark
+    if mark == "auto":
+        mark = "hist" if y is None else "scatter"
 
     # Axis limits & clipping
     x_scale = alt.Scale(domain=list(x_lim)) if x_lim is not None else alt.Undefined
@@ -89,40 +89,40 @@ def qplot(
     _clip = x_lim is not None or y_lim is not None
     x_enc = (
         alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
-        if geom == "hist"
+        if mark == "hist"
         else alt.X(x, title=_clean_label(x), scale=x_scale)
     )
     y_enc = (
         alt.Y("count()", title="count", scale=y_scale)
-        if geom == "hist"
+        if mark == "hist"
         else (alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None)
     )
 
     # Build the mark + encoding
-    if geom == "scatter":
+    if mark == "scatter":
         chart = chart.mark_point(
             filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
         ).encode(x=x_enc, y=y_enc)
-    elif geom == "circle":
+    elif mark == "circle":
         chart = chart.mark_circle(
             opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
         ).encode(x=x_enc, y=y_enc)
-    elif geom == "hist":
+    elif mark == "hist":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
-    elif geom == "line":
+    elif mark == "line":
         chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
-    elif geom == "bar":
+    elif mark == "bar":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
-    elif geom == "area":
+    elif mark == "area":
         chart = chart.mark_area(
             opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
         ).encode(x=x_enc, y=y_enc)
-    elif geom == "step":
+    elif mark == "step":
         chart = chart.mark_line(interpolate="step", strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
-    elif geom == "boxplot":
+    elif mark == "boxplot":
         chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
     else:
-        raise ValueError(f"Unknown geom: {geom}")
+        raise ValueError(f"Unknown mark: {mark}")
 
     # Group: splits data by a column (separate marks) but no color distinction
     if group is not None:
