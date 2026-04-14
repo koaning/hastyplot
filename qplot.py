@@ -69,9 +69,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(cars, mo, qplot, theme_dropdown):
-    _t = theme_dropdown.value
-
-    _top = mo.hstack(
+    mo.hstack(
         [
             qplot(
                 cars,
@@ -80,18 +78,16 @@ def _(cars, mo, qplot, theme_dropdown):
                 color="Origin",
                 title="HP vs MPG",
                 subtitle="With loess smooth per group",
-                theme=_t,
+                theme=theme_dropdown.value,
                 smooth="loess",
             ),
             qplot(
-                cars, "Origin", "Miles_per_Gallon", geom="boxplot", title="MPG by Origin", theme=_t
+                cars, "Origin", "Miles_per_Gallon", geom="boxplot", title="MPG by Origin", theme=theme_dropdown.value
             ),
-            qplot(cars, "Horsepower", title="Distribution of Horsepower", theme=_t),
+            qplot(cars, "Horsepower", title="Distribution of Horsepower", theme=theme_dropdown.value),
         ],
         widths="equal",
     )
-
-    _top
     return
 
 
@@ -138,6 +134,33 @@ def _(cars, qplot, theme_dropdown):
         width=150,
         height=150,
         theme=theme_dropdown.value,
+    )
+    return
+
+
+@app.cell
+def _(cars, mo, qplot, theme_dropdown):
+    mo.hstack(
+        [
+            qplot(
+                cars,
+                "Horsepower",
+                "Miles_per_Gallon",
+                x_lim=(0, 250),
+                y_lim=(None, 40),
+                title="With axis limits",
+                subtitle="x_lim=(0, 250), y_lim=(None, 40)",
+                theme=theme_dropdown.value,
+            ),
+            qplot(
+                cars,
+                "Horsepower",
+                "Miles_per_Gallon",
+                title="Without axis limits",
+                theme=theme_dropdown.value,
+            ),
+        ],
+        widths="equal",
     )
     return
 
@@ -246,6 +269,8 @@ def _(alt):
         # Layout & appearance
         width: int | None = None,
         height: int | None = None,
+        x_lim: tuple[float | None, float | None] | None = None,
+        y_lim: tuple[float | None, float | None] | None = None,
         title: str | None = None,
         subtitle: str | None = None,
         theme: str = "default",
@@ -282,6 +307,8 @@ def _(alt):
 
         **Layout & appearance**
         - `width` / `height` — chart size in pixels (per panel when faceted).
+        - `x_lim` / `y_lim` — tuple of (min, max) to set axis limits.
+          Either side can be `None` to keep it automatic, e.g. `(None, 100)`.
         - `title` / `subtitle` — chart title and subtitle.
         - `theme` — `"default"`, `"clean"`, or `"minimal"`.
         - `actions` — show the Vega-Lite export menu (default `False`).
@@ -292,35 +319,38 @@ def _(alt):
         if geom == "auto":
             geom = "hist" if y is None else "scatter"
 
-        # Clean axis labels
+        # Axis limits & clipping
+        x_scale = alt.Scale(domain=list(x_lim)) if x_lim is not None else alt.Undefined
+        y_scale = alt.Scale(domain=list(y_lim)) if y_lim is not None else alt.Undefined
+        _clip = x_lim is not None or y_lim is not None
         x_enc = (
-            alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x))
+            alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
             if geom == "hist"
-            else alt.X(x, title=_clean_label(x))
+            else alt.X(x, title=_clean_label(x), scale=x_scale)
         )
         y_enc = (
-            alt.Y("count()", title="count")
+            alt.Y("count()", title="count", scale=y_scale)
             if geom == "hist"
-            else (alt.Y(y, title=_clean_label(y)) if y else None)
+            else (alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None)
         )
 
         # Build the mark + encoding
         if geom == "scatter":
             chart = chart.mark_point(
-                filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+                filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
             ).encode(x=x_enc, y=y_enc)
         elif geom == "circle":
             chart = chart.mark_circle(
-                opacity=opacity if isinstance(opacity, (int, float)) else 0.7
+                opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
             ).encode(x=x_enc, y=y_enc)
         elif geom == "hist":
-            chart = chart.mark_bar().encode(x=x_enc, y=y_enc)
+            chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
         elif geom == "line":
-            chart = chart.mark_line(strokeWidth=2).encode(x=x_enc, y=y_enc)
+            chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
         elif geom == "bar":
-            chart = chart.mark_bar().encode(x=x_enc, y=y_enc)
+            chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
         elif geom == "boxplot":
-            chart = chart.mark_boxplot().encode(x=x_enc, y=y_enc)
+            chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
         else:
             raise ValueError(f"Unknown geom: {geom}")
 
@@ -343,14 +373,14 @@ def _(alt):
             if smooth == "loess":
                 trend = (
                     smooth_base.transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
-                    .mark_line(strokeWidth=3, opacity=0.9)
-                    .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
+                    .mark_line(strokeWidth=3, opacity=0.9, clip=_clip)
+                    .encode(x=alt.X(x, title=_clean_label(x), scale=x_scale), y=alt.Y(y, title=_clean_label(y), scale=y_scale))
                 )
             else:
                 trend = (
                     smooth_base.transform_regression(x, y, method=smooth, groupby=groupby)
-                    .mark_line(strokeWidth=3, opacity=0.9)
-                    .encode(x=alt.X(x, title=_clean_label(x)), y=alt.Y(y, title=_clean_label(y)))
+                    .mark_line(strokeWidth=3, opacity=0.9, clip=_clip)
+                    .encode(x=alt.X(x, title=_clean_label(x), scale=x_scale), y=alt.Y(y, title=_clean_label(y), scale=y_scale))
                 )
             if color is not None:
                 trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
@@ -644,6 +674,39 @@ def _(df_test, qplot):
     def test_pipe_works():
         spec = df_test.pipe(qplot, "x", "y", color="x").to_dict()
         assert spec["encoding"]["color"]["field"] == "x"
+
+
+    def test_x_lim():
+        spec = qplot(df_test, "x", "y", x_lim=(0, 100)).to_dict()
+        assert spec["encoding"]["x"]["scale"]["domain"] == [0, 100]
+
+
+    def test_y_lim():
+        spec = qplot(df_test, "x", "y", y_lim=(0, 50)).to_dict()
+        assert spec["encoding"]["y"]["scale"]["domain"] == [0, 50]
+
+
+    def test_partial_x_lim():
+        spec = qplot(df_test, "x", "y", x_lim=(None, 100)).to_dict()
+        assert spec["encoding"]["x"]["scale"]["domain"] == [None, 100]
+
+
+    def test_partial_y_lim():
+        spec = qplot(df_test, "x", "y", y_lim=(5, None)).to_dict()
+        assert spec["encoding"]["y"]["scale"]["domain"] == [5, None]
+
+
+    def test_lim_default_none():
+        spec = qplot(df_test, "x", "y").to_dict()
+        assert "scale" not in spec["encoding"]["x"]
+        assert "scale" not in spec["encoding"]["y"]
+
+
+    def test_lim_with_smooth():
+        spec = qplot(df_test, "x", "y", x_lim=(0, 10), smooth="loess").to_dict()
+        assert "layer" in spec
+        for layer in spec["layer"]:
+            assert layer["encoding"]["x"]["scale"]["domain"] == [0, 10]
 
     return
 
