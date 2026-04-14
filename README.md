@@ -36,14 +36,14 @@ qplot(cars, "Horsepower", "Miles_per_Gallon",
       title="HP vs MPG", theme="minimal")
 
 # Boxplot
-qplot(cars, "Origin", "Miles_per_Gallon", geom="boxplot")
+qplot(cars, "Origin", "Miles_per_Gallon", mark="boxplot")
 
 # Faceted scatter
 qplot(cars, "Horsepower", "Miles_per_Gallon",
       facet_wrap="Cylinders", columns=3, width=200, height=150)
 
 # Lines grouped without color
-qplot(stocks, "date", "price", geom="line", group="symbol")
+qplot(stocks, "date", "price", mark="line", group="symbol")
 
 # Histogram with custom bins
 qplot(cars, "Horsepower", bins=20, theme="clean")
@@ -77,8 +77,8 @@ There is only one function and it is called `qplot`. In this function `data` is 
 - `group` — column to group by *without* changing color.
   Useful for separate lines per group in a uniform color.
 
-**Geom & smoothing**
-- `geom` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
+**Mark & smoothing**
+- `mark` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
 - `smooth` — overlay a trend line: `"loess"`, `"linear"`.
 - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
 - `bins` — number of histogram bins. Omit for Altair's default.

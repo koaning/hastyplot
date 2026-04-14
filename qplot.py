@@ -82,7 +82,7 @@ def _(cars, mo, qplot, theme_dropdown):
                 smooth="loess",
             ),
             qplot(
-                cars, "Origin", "Miles_per_Gallon", geom="boxplot", title="MPG by Origin", theme=theme_dropdown.value
+                cars, "Origin", "Miles_per_Gallon", mark="boxplot", title="MPG by Origin", theme=theme_dropdown.value
             ),
             qplot(cars, "Horsepower", title="Distribution of Horsepower", theme=theme_dropdown.value),
         ],
@@ -103,7 +103,7 @@ def _(cars, qplot, theme_dropdown):
         cars,
         x="Horsepower",
         y="Miles_per_Gallon",
-        geom="circle",
+        mark="circle",
         color="Origin",
         facet_col="Origin",
         title="facet_col",
@@ -127,7 +127,7 @@ def _(cars, qplot, theme_dropdown):
         cars,
         "Horsepower",
         "Miles_per_Gallon",
-        geom="circle",
+        mark="circle",
         facet_wrap="Cylinders",
         columns=3,
         title="facet_wrap",
@@ -179,7 +179,7 @@ def _(cars, mo, qplot, stocks, theme_dropdown):
                 stocks,
                 "date",
                 "price",
-                geom="area",
+                mark="area",
                 color="symbol",
                 title="Area",
                 theme=theme_dropdown.value,
@@ -188,7 +188,7 @@ def _(cars, mo, qplot, stocks, theme_dropdown):
                 stocks,
                 "date",
                 "price",
-                geom="step",
+                mark="step",
                 color="symbol",
                 title="Step",
                 theme=theme_dropdown.value,
@@ -300,8 +300,8 @@ def _(alt):
         opacity: float | str = 0.7,
         group: str | None = None,
         tooltip: list[str] | None = None,
-        # Geom & smoothing
-        geom: str = "auto",
+        # Mark & smoothing
+        mark: str = "auto",
         smooth: str | None = None,
         bandwidth: float = 0.3,
         bins: int | None = None,
@@ -337,8 +337,8 @@ def _(alt):
           Useful for separate lines per group in a uniform color.
         - `tooltip` — list of column names to show on hover (e.g. `["col_a", "col_b"]`).
 
-        **Geom & smoothing**
-        - `geom` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
+        **Mark & smoothing**
+        - `mark` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
           Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
         - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
           `"log"`, `"exp"`, `"pow"`.
@@ -360,9 +360,9 @@ def _(alt):
         """
         chart = alt.Chart(data)
 
-        # Auto-select geom
-        if geom == "auto":
-            geom = "hist" if y is None else "scatter"
+        # Auto-select mark
+        if mark == "auto":
+            mark = "hist" if y is None else "scatter"
 
         # Axis limits & clipping
         x_scale = alt.Scale(domain=list(x_lim)) if x_lim is not None else alt.Undefined
@@ -370,40 +370,40 @@ def _(alt):
         _clip = x_lim is not None or y_lim is not None
         x_enc = (
             alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
-            if geom == "hist"
+            if mark == "hist"
             else alt.X(x, title=_clean_label(x), scale=x_scale)
         )
         y_enc = (
             alt.Y("count()", title="count", scale=y_scale)
-            if geom == "hist"
+            if mark == "hist"
             else (alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None)
         )
 
         # Build the mark + encoding
-        if geom == "scatter":
+        if mark == "scatter":
             chart = chart.mark_point(
                 filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
             ).encode(x=x_enc, y=y_enc)
-        elif geom == "circle":
+        elif mark == "circle":
             chart = chart.mark_circle(
                 opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
             ).encode(x=x_enc, y=y_enc)
-        elif geom == "hist":
+        elif mark == "hist":
             chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
-        elif geom == "line":
+        elif mark == "line":
             chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
-        elif geom == "bar":
+        elif mark == "bar":
             chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
-        elif geom == "area":
+        elif mark == "area":
             chart = chart.mark_area(
                 opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
             ).encode(x=x_enc, y=y_enc)
-        elif geom == "step":
+        elif mark == "step":
             chart = chart.mark_line(interpolate="step", strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
-        elif geom == "boxplot":
+        elif mark == "boxplot":
             chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
         else:
-            raise ValueError(f"Unknown geom: {geom}")
+            raise ValueError(f"Unknown mark: {mark}")
 
         # Group: splits data by a column (separate marks) but no color distinction
         if group is not None:
@@ -657,7 +657,7 @@ def _(df_test, qplot):
 
 
     def test_group_uses_detail():
-        spec = qplot(df_test, "x", "y", geom="line", group="c").to_dict()
+        spec = qplot(df_test, "x", "y", mark="line", group="c").to_dict()
         assert spec["encoding"]["detail"]["field"] == "c"
 
 
@@ -694,28 +694,28 @@ def _(df_test, qplot):
         assert len(spec["layer"]) == 2
 
 
-    def test_geom_scatter():
-        assert qplot(df_test, "x", "y", geom="scatter").to_dict()["mark"]["type"] == "point"
+    def test_mark_scatter():
+        assert qplot(df_test, "x", "y", mark="scatter").to_dict()["mark"]["type"] == "point"
 
 
-    def test_geom_circle():
-        assert qplot(df_test, "x", "y", geom="circle").to_dict()["mark"]["type"] == "circle"
+    def test_mark_circle():
+        assert qplot(df_test, "x", "y", mark="circle").to_dict()["mark"]["type"] == "circle"
 
 
-    def test_geom_line():
-        assert qplot(df_test, "x", "y", geom="line").to_dict()["mark"]["type"] == "line"
+    def test_mark_line():
+        assert qplot(df_test, "x", "y", mark="line").to_dict()["mark"]["type"] == "line"
 
 
-    def test_geom_bar():
-        assert qplot(df_test, "x", "y", geom="bar").to_dict()["mark"]["type"] == "bar"
+    def test_mark_bar():
+        assert qplot(df_test, "x", "y", mark="bar").to_dict()["mark"]["type"] == "bar"
 
 
-    def test_invalid_geom_raises():
+    def test_invalid_mark_raises():
         try:
-            qplot(df_test, "x", "y", geom="nope")
+            qplot(df_test, "x", "y", mark="nope")
             assert False, "Should have raised"
         except ValueError as e:
-            assert "Unknown geom" in str(e)
+            assert "Unknown mark" in str(e)
 
 
     def test_invalid_theme_raises():
@@ -726,18 +726,18 @@ def _(df_test, qplot):
             assert "Unknown theme" in str(e)
 
 
-    def test_geom_area():
-        spec = qplot(df_test, "x", "y", geom="area").to_dict()
+    def test_mark_area():
+        spec = qplot(df_test, "x", "y", mark="area").to_dict()
         assert spec["mark"]["type"] == "area"
 
 
-    def test_geom_area_respects_opacity():
-        spec = qplot(df_test, "x", "y", geom="area", opacity=0.5).to_dict()
+    def test_mark_area_respects_opacity():
+        spec = qplot(df_test, "x", "y", mark="area", opacity=0.5).to_dict()
         assert spec["mark"]["opacity"] == 0.5
 
 
-    def test_geom_step():
-        spec = qplot(df_test, "x", "y", geom="step").to_dict()
+    def test_mark_step():
+        spec = qplot(df_test, "x", "y", mark="step").to_dict()
         assert spec["mark"]["type"] == "line"
         assert spec["mark"]["interpolate"] == "step"
         assert spec["mark"]["strokeWidth"] == 2
