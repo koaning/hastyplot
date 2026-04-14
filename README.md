@@ -47,6 +47,20 @@ qplot(stocks, "date", "price", mark="line", group="symbol")
 
 # Histogram with custom bins
 qplot(cars, "Horsepower", bins=20, theme="clean")
+
+# Area chart
+qplot(stocks, "date", "price", mark="area", color="symbol")
+
+# Step chart
+qplot(stocks, "date", "price", mark="step", color="symbol")
+
+# With axis limits and tooltip
+qplot(cars, "Horsepower", "Miles_per_Gallon",
+      x_lim=(0, 250), y_lim=(None, 40),
+      tooltip=["Name", "Origin"])
+
+# Polynomial smooth
+qplot(cars, "Horsepower", "Miles_per_Gallon", smooth="poly")
 ```
 
 ## Themes
@@ -69,6 +83,8 @@ There is only one function and it is called `qplot`. In this function `data` is 
 - `data` — DataFrame to plot.
 - `x` — column for the x-axis.
 - `y` — column for the y-axis. Omit for a histogram.
+- `x_lim` / `y_lim` — axis limits as `(min, max)` tuples. Use `None` for an open bound.
+- `tooltip` — list of column names to show on hover.
 
 **Aesthetics**
 - `color` — column to map to color.
@@ -78,8 +94,8 @@ There is only one function and it is called `qplot`. In this function `data` is 
   Useful for separate lines per group in a uniform color.
 
 **Mark & smoothing**
-- `mark` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`.
-- `smooth` — overlay a trend line: `"loess"`, `"linear"`.
+- `mark` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`, `"area"`, `"step"`.
+- `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`, `"log"`, `"exp"`, `"pow"`.
 - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
 - `bins` — number of histogram bins. Omit for Altair's default.
 
