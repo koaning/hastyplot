@@ -3,9 +3,175 @@ __all__ = ['qplot']
 
 import altair as alt
 
+import re
+import weakref
+from typing import Any
+
+
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+# Metadata lives outside Altair schema objects so it never leaks into Vega-Lite output.
+# We key by `id(chart)` because Altair chart objects are not hashable.
+_HASTY_META: dict[int, tuple[weakref.ReferenceType, str, bool]] = {}
+
+
+def _meta_for(chart: Any) -> tuple[str, bool] | None:
+    # Guard against id reuse: only return metadata if the weakref still points to this exact object.
+    item = _HASTY_META.get(id(chart))
+    if item is None:
+        return None
+    ref, theme, actions = item
+    if ref() is not chart:
+        _HASTY_META.pop(id(chart), None)
+        return None
+    return theme, actions
+
+
 def _clean_label(name):
     """Lowercase and replace -/_ with spaces."""
     return name.replace("_", " ").replace("-", " ").lower()
+
+
+def _merge_theme(left: str, right: str) -> str:
+    if left == right:
+        return left
+    if left == "default":
+        return right
+    if right == "default":
+        return left
+    raise ValueError(f"Cannot combine charts with different non-default themes: '{left}' and '{right}'")
+
+
+def _coerce_color(color: str | None) -> tuple[str | None, str | None]:
+    if color is None:
+        return None, None
+
+    # '#red' -> constant named color; '#ff0000' stays a constant hex color.
+    if color.startswith("#"):
+        if _HEX_COLOR_RE.fullmatch(color):
+            return None, color
+        if len(color) == 1:
+            raise ValueError("Invalid color shorthand '#'. Use '#red' or a hex color like '#ff0000'.")
+        return None, color[1:]
+
+    return color, None
+
+
+def _strip_top_level_only_props(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
+    stripped = chart.copy(deep=True)
+    if hasattr(stripped, "config"):
+        stripped.config = alt.Undefined
+    if hasattr(stripped, "usermeta"):
+        stripped.usermeta = alt.Undefined
+    return stripped
+
+
+def _is_hasty(chart: Any) -> bool:
+    return _meta_for(chart) is not None
+
+
+def _hasty_theme(chart: Any) -> str:
+    meta = _meta_for(chart)
+    return meta[0] if meta is not None else "default"
+
+
+def _hasty_actions(chart: Any) -> bool:
+    meta = _meta_for(chart)
+    return meta[1] if meta is not None else False
+
+
+def _attach_hasty(chart: alt.TopLevelMixin, *, theme: str, actions: bool) -> alt.TopLevelMixin:
+    _HASTY_META[id(chart)] = (weakref.ref(chart), theme, actions)
+    return chart
+
+
+def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
+    if not _is_hasty(chart):
+        return chart
+    # Apply top-level-only settings late, right before serialization/render.
+    finalized = chart.copy(deep=True)
+    finalized = _apply_theme(finalized, _hasty_theme(chart))
+    finalized = finalized.properties(usermeta={"embedOptions": {"actions": _hasty_actions(chart)}})
+    return finalized
+
+
+def _prepare_child(chart: Any) -> Any:
+    # In composed charts, children may not carry top-level fields like `config` or `usermeta`.
+    if _is_hasty(chart):
+        return _strip_top_level_only_props(chart)
+    return chart
+
+
+def _ensure_hasty_hooks() -> None:
+    # Install once per process: qplot charts carry deferred metadata, plain Altair charts do not.
+    if getattr(alt.TopLevelMixin, "_hasty_hooks_installed", False):
+        return
+
+    orig_add = alt.TopLevelMixin.__add__
+    orig_or = alt.TopLevelMixin.__or__
+    orig_and = alt.TopLevelMixin.__and__
+    orig_layer_add = alt.LayerChart.__add__
+    orig_hconcat_or = alt.HConcatChart.__or__
+    orig_concat_or = alt.ConcatChart.__or__
+    orig_vconcat_and = alt.VConcatChart.__and__
+    orig_to_dict = alt.TopLevelMixin.to_dict
+    orig_to_json = alt.TopLevelMixin.to_json
+    orig_save = alt.TopLevelMixin.save
+    orig_repr = alt.TopLevelMixin._repr_mimebundle_
+
+    def _compose_with(op, self, other):
+        # Fast path: if neither side is from qplot, keep native Altair behavior unchanged.
+        if not (_is_hasty(self) or _is_hasty(other)):
+            return op(self, other)
+        combined = op(_prepare_child(self), _prepare_child(other))
+        theme = _merge_theme(_hasty_theme(self), _hasty_theme(other))
+        actions = _hasty_actions(self) or _hasty_actions(other)
+        return _attach_hasty(combined, theme=theme, actions=actions)
+
+    def patched_add(self, other):
+        return _compose_with(orig_add, self, other)
+
+    def patched_or(self, other):
+        return _compose_with(orig_or, self, other)
+
+    def patched_and(self, other):
+        return _compose_with(orig_and, self, other)
+
+    def patched_layer_add(self, other):
+        return _compose_with(orig_layer_add, self, other)
+
+    def patched_hconcat_or(self, other):
+        return _compose_with(orig_hconcat_or, self, other)
+
+    def patched_concat_or(self, other):
+        return _compose_with(orig_concat_or, self, other)
+
+    def patched_vconcat_and(self, other):
+        return _compose_with(orig_vconcat_and, self, other)
+
+    def patched_to_dict(self, *args: Any, **kwargs: Any):
+        return orig_to_dict(_finalize_hasty(self), *args, **kwargs)
+
+    def patched_to_json(self, *args: Any, **kwargs: Any):
+        return orig_to_json(_finalize_hasty(self), *args, **kwargs)
+
+    def patched_save(self, *args: Any, **kwargs: Any):
+        return orig_save(_finalize_hasty(self), *args, **kwargs)
+
+    def patched_repr(self, *args: Any, **kwargs: Any):
+        return orig_repr(_finalize_hasty(self), *args, **kwargs)
+
+    alt.TopLevelMixin.__add__ = patched_add
+    alt.TopLevelMixin.__or__ = patched_or
+    alt.TopLevelMixin.__and__ = patched_and
+    alt.LayerChart.__add__ = patched_layer_add
+    alt.HConcatChart.__or__ = patched_hconcat_or
+    alt.ConcatChart.__or__ = patched_concat_or
+    alt.VConcatChart.__and__ = patched_vconcat_and
+    alt.TopLevelMixin.to_dict = patched_to_dict
+    alt.TopLevelMixin.to_json = patched_to_json
+    alt.TopLevelMixin.save = patched_save
+    alt.TopLevelMixin._repr_mimebundle_ = patched_repr
+    setattr(alt.TopLevelMixin, "_hasty_hooks_installed", True)
 
 
 def qplot(
@@ -38,7 +204,7 @@ def qplot(
     subtitle: str | None = None,
     theme: str = "default",
     actions: bool = False,
-) -> alt.Chart:
+) -> alt.TopLevelMixin:
     """Quick plot for Altair. Inspired by ggplot2's qplot.
 
     `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`.
@@ -50,6 +216,7 @@ def qplot(
 
     **Aesthetics**
     - `color` — column to map to color.
+      Use `"#red"` for a fixed named color value, or `"#ff0000"` for a fixed hex color.
     - `size` — column to map to point size.
     - `opacity` — a fixed float (e.g. `0.5`) or a column name.
     - `group` — column to group by *without* changing color.
@@ -58,7 +225,7 @@ def qplot(
 
     **Mark & smoothing**
     - `mark` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
-      Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
+      Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`, `"rect"`.
     - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
       `"log"`, `"exp"`, `"pow"`.
     - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
@@ -77,26 +244,33 @@ def qplot(
     - `theme` — `"default"`, `"clean"`, or `"minimal"`.
     - `actions` — show the Vega-Lite export menu (default `False`).
     """
+    if theme not in {"default", "clean", "minimal"}:
+        raise ValueError(f"Unknown theme: {theme}")
+
+    _ensure_hasty_hooks()
+    color, const_color = _coerce_color(color)
+
     chart = alt.Chart(data)
 
     # Auto-select mark
     if mark == "auto":
         mark = "hist" if y is None else "scatter"
+    if mark == "rect" and y is None:
+        raise ValueError("mark='rect' requires y for the matrix row coordinate.")
 
     # Axis limits & clipping
     x_scale = alt.Scale(domain=list(x_lim)) if x_lim is not None else alt.Undefined
     y_scale = alt.Scale(domain=list(y_lim)) if y_lim is not None else alt.Undefined
     _clip = x_lim is not None or y_lim is not None
-    x_enc = (
-        alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
-        if mark == "hist"
-        else alt.X(x, title=_clean_label(x), scale=x_scale)
-    )
-    y_enc = (
-        alt.Y("count()", title="count", scale=y_scale)
-        if mark == "hist"
-        else (alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None)
-    )
+    if mark == "hist":
+        x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y("count()", title="count", scale=y_scale)
+    elif mark == "rect":
+        x_enc = alt.X(x, type="ordinal", title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y(y, type="ordinal", title=_clean_label(y), scale=y_scale)
+    else:
+        x_enc = alt.X(x, title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None
 
     # Build the mark + encoding
     if mark == "scatter":
@@ -113,6 +287,8 @@ def qplot(
         chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
     elif mark == "bar":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
+    elif mark == "rect":
+        chart = chart.mark_rect(clip=_clip).encode(x=x_enc, y=y_enc)
     elif mark == "area":
         chart = chart.mark_area(
             opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
@@ -131,6 +307,8 @@ def qplot(
     # Optional encodings
     if color is not None:
         chart = chart.encode(color=alt.Color(color, title=_clean_label(color)))
+    elif const_color is not None:
+        chart = chart.encode(color=alt.value(const_color))
     if size is not None:
         chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
     if isinstance(opacity, str):
@@ -158,6 +336,8 @@ def qplot(
             )
         if color is not None:
             trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
+        elif const_color is not None:
+            trend = trend.encode(color=alt.value(const_color))
         chart = chart + trend
 
     # Width and height (applied per facet panel or to whole chart)
@@ -193,13 +373,7 @@ def qplot(
         title_obj = alt.TitleParams(text="", subtitle=subtitle)
         chart = chart.properties(title=title_obj)
 
-    # Embed options to control action menu
-    chart = chart.properties(usermeta={"embedOptions": {"actions": actions}})
-
-    # Apply theme
-    chart = _apply_theme(chart, theme)
-
-    return chart
+    return _attach_hasty(chart, theme=theme, actions=actions)
 
 
 _TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
@@ -229,7 +403,7 @@ def _apply_theme(chart, theme):
                 subtitleFont="system-ui",
                 subtitleFontSize=13,
                 subtitleColor="#666",
-                color="#1a1a1a",
+                color="currentColor",
                 **_TITLE_COMMON,
             )
             .configure_legend(
@@ -262,7 +436,7 @@ def _apply_theme(chart, theme):
                 fontSize=20,
                 fontWeight=700,
                 font="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                color="#1a1a1a",
+                color="currentColor",
                 subtitleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
                 subtitleFontSize=14,
                 subtitleColor="#888",
