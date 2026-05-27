@@ -225,7 +225,7 @@ def qplot(
 
     **Mark & smoothing**
     - `mark` — `"auto"` picks `"hist"` for x-only, `"scatter"` for x+y.
-      Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`.
+      Options: `"scatter"`, `"circle"`, `"line"`, `"area"`, `"step"`, `"bar"`, `"boxplot"`, `"hist"`, `"rect"`.
     - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`,
       `"log"`, `"exp"`, `"pow"`.
     - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
@@ -255,21 +255,22 @@ def qplot(
     # Auto-select mark
     if mark == "auto":
         mark = "hist" if y is None else "scatter"
+    if mark == "rect" and y is None:
+        raise ValueError("mark='rect' requires y for the matrix row coordinate.")
 
     # Axis limits & clipping
     x_scale = alt.Scale(domain=list(x_lim)) if x_lim is not None else alt.Undefined
     y_scale = alt.Scale(domain=list(y_lim)) if y_lim is not None else alt.Undefined
     _clip = x_lim is not None or y_lim is not None
-    x_enc = (
-        alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
-        if mark == "hist"
-        else alt.X(x, title=_clean_label(x), scale=x_scale)
-    )
-    y_enc = (
-        alt.Y("count()", title="count", scale=y_scale)
-        if mark == "hist"
-        else (alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None)
-    )
+    if mark == "hist":
+        x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y("count()", title="count", scale=y_scale)
+    elif mark == "rect":
+        x_enc = alt.X(x, type="ordinal", title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y(y, type="ordinal", title=_clean_label(y), scale=y_scale)
+    else:
+        x_enc = alt.X(x, title=_clean_label(x), scale=x_scale)
+        y_enc = alt.Y(y, title=_clean_label(y), scale=y_scale) if y else None
 
     # Build the mark + encoding
     if mark == "scatter":
@@ -286,6 +287,8 @@ def qplot(
         chart = chart.mark_line(strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
     elif mark == "bar":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
+    elif mark == "rect":
+        chart = chart.mark_rect(clip=_clip).encode(x=x_enc, y=y_enc)
     elif mark == "area":
         chart = chart.mark_area(
             opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip

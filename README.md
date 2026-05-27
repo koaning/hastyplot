@@ -38,6 +38,9 @@ qplot(cars, "Horsepower", "Miles_per_Gallon",
 # Boxplot
 qplot(cars, "Origin", "Miles_per_Gallon", mark="boxplot")
 
+# Matrix / heatmap from long-table data
+qplot(matrix_df, "col", "row", mark="rect", color="value")
+
 # Faceted scatter
 qplot(cars, "Horsepower", "Miles_per_Gallon",
       facet_wrap="Cylinders", columns=3, width=200, height=150)
@@ -98,7 +101,7 @@ There is only one function and it is called `qplot`. In this function `data` is 
   Useful for separate lines per group in a uniform color.
 
 **Mark & smoothing**
-- `mark` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`, `"area"`, `"step"`.
+- `mark` — options: `"scatter"`, `"circle"`, `"line"`, `"bar"`, `"boxplot"`, `"hist"`, `"area"`, `"step"`, `"rect"`.
 - `smooth` — overlay a trend line: `"loess"`, `"linear"`, `"poly"`, `"log"`, `"exp"`, `"pow"`.
 - `bandwidth` — loess bandwidth, 0 to 1 (default `0.3`). Lower = wigglier.
 - `bins` — number of histogram bins. Omit for Altair's default.
