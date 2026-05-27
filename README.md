@@ -45,6 +45,9 @@ qplot(cars, "Horsepower", "Miles_per_Gallon",
 # Lines grouped without color
 qplot(stocks, "date", "price", mark="line", group="symbol")
 
+# Lines grouped with a fixed color
+qplot(stocks, "date", "price", mark="line", group="symbol", color="#red")
+
 # Histogram with custom bins
 qplot(cars, "Horsepower", bins=20, theme="clean")
 
@@ -88,6 +91,8 @@ There is only one function and it is called `qplot`. In this function `data` is 
 
 **Aesthetics**
 - `color` — column to map to color.
+  Use `"#red"` for a fixed named color value, or `"#ff0000"` for a fixed hex color.
+- `color_value` — fixed color for all marks (e.g. `"red"` or `"#e15759"`).
 - `size` — column to map to point size.
 - `opacity` — a fixed float (e.g. `0.5`) or a column name.
 - `group` — column to group by *without* changing color.
@@ -109,4 +114,3 @@ There is only one function and it is called `qplot`. In this function `data` is 
 - `title` / `subtitle` — chart title and subtitle.
 - `theme` — `"default"`, `"clean"`, or `"minimal"`.
 - `actions` — show the Vega-Lite export menu (default `False`).
-
