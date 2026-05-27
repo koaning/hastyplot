@@ -9,10 +9,13 @@ from typing import Any
 
 
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+# Metadata lives outside Altair schema objects so it never leaks into Vega-Lite output.
+# We key by `id(chart)` because Altair chart objects are not hashable.
 _HASTY_META: dict[int, tuple[weakref.ReferenceType, str, bool]] = {}
 
 
 def _meta_for(chart: Any) -> tuple[str, bool] | None:
+    # Guard against id reuse: only return metadata if the weakref still points to this exact object.
     item = _HASTY_META.get(id(chart))
     if item is None:
         return None
@@ -38,12 +41,9 @@ def _merge_theme(left: str, right: str) -> str:
     raise ValueError(f"Cannot combine charts with different non-default themes: '{left}' and '{right}'")
 
 
-def _coerce_color(color: str | None, color_value: str | None) -> tuple[str | None, str | None]:
-    if color is not None and color_value is not None:
-        raise ValueError("Use either 'color' or 'color_value', not both.")
-
+def _coerce_color(color: str | None) -> tuple[str | None, str | None]:
     if color is None:
-        return None, color_value
+        return None, None
 
     # '#red' -> constant named color; '#ff0000' stays a constant hex color.
     if color.startswith("#"):
@@ -53,7 +53,7 @@ def _coerce_color(color: str | None, color_value: str | None) -> tuple[str | Non
             raise ValueError("Invalid color shorthand '#'. Use '#red' or a hex color like '#ff0000'.")
         return None, color[1:]
 
-    return color, color_value
+    return color, None
 
 
 def _strip_top_level_only_props(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
@@ -87,6 +87,7 @@ def _attach_hasty(chart: alt.TopLevelMixin, *, theme: str, actions: bool) -> alt
 def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     if not _is_hasty(chart):
         return chart
+    # Apply top-level-only settings late, right before serialization/render.
     finalized = chart.copy(deep=True)
     finalized = _apply_theme(finalized, _hasty_theme(chart))
     finalized = finalized.properties(usermeta={"embedOptions": {"actions": _hasty_actions(chart)}})
@@ -94,12 +95,14 @@ def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
 
 
 def _prepare_child(chart: Any) -> Any:
+    # In composed charts, children may not carry top-level fields like `config` or `usermeta`.
     if _is_hasty(chart):
         return _strip_top_level_only_props(chart)
     return chart
 
 
 def _ensure_hasty_hooks() -> None:
+    # Install once per process: qplot charts carry deferred metadata, plain Altair charts do not.
     if getattr(alt.TopLevelMixin, "_hasty_hooks_installed", False):
         return
 
@@ -116,6 +119,7 @@ def _ensure_hasty_hooks() -> None:
     orig_repr = alt.TopLevelMixin._repr_mimebundle_
 
     def _compose_with(op, self, other):
+        # Fast path: if neither side is from qplot, keep native Altair behavior unchanged.
         if not (_is_hasty(self) or _is_hasty(other)):
             return op(self, other)
         combined = op(_prepare_child(self), _prepare_child(other))
@@ -177,7 +181,6 @@ def qplot(
     *,
     # Aesthetics
     color: str | None = None,
-    color_value: str | None = None,
     size: str | None = None,
     opacity: float | str = 0.7,
     group: str | None = None,
@@ -214,7 +217,6 @@ def qplot(
     **Aesthetics**
     - `color` — column to map to color.
       Use `"#red"` for a fixed named color value, or `"#ff0000"` for a fixed hex color.
-    - `color_value` — fixed color for all marks (e.g. `"red"` or `"#e15759"`).
     - `size` — column to map to point size.
     - `opacity` — a fixed float (e.g. `0.5`) or a column name.
     - `group` — column to group by *without* changing color.
@@ -246,7 +248,7 @@ def qplot(
         raise ValueError(f"Unknown theme: {theme}")
 
     _ensure_hasty_hooks()
-    color, color_value = _coerce_color(color, color_value)
+    color, const_color = _coerce_color(color)
 
     chart = alt.Chart(data)
 
@@ -302,8 +304,8 @@ def qplot(
     # Optional encodings
     if color is not None:
         chart = chart.encode(color=alt.Color(color, title=_clean_label(color)))
-    elif color_value is not None:
-        chart = chart.encode(color=alt.value(color_value))
+    elif const_color is not None:
+        chart = chart.encode(color=alt.value(const_color))
     if size is not None:
         chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
     if isinstance(opacity, str):
@@ -331,8 +333,8 @@ def qplot(
             )
         if color is not None:
             trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
-        elif color_value is not None:
-            trend = trend.encode(color=alt.value(color_value))
+        elif const_color is not None:
+            trend = trend.encode(color=alt.value(const_color))
         chart = chart + trend
 
     # Width and height (applied per facet panel or to whole chart)

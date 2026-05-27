@@ -352,12 +352,9 @@ def _(alt):
         raise ValueError(f"Cannot combine charts with different non-default themes: '{left}' and '{right}'")
 
 
-    def _coerce_color(color: str | None, color_value: str | None) -> tuple[str | None, str | None]:
-        if color is not None and color_value is not None:
-            raise ValueError("Use either 'color' or 'color_value', not both.")
-
+    def _coerce_color(color: str | None) -> tuple[str | None, str | None]:
         if color is None:
-            return None, color_value
+            return None, None
 
         # '#red' -> constant named color; '#ff0000' stays a constant hex color.
         if color.startswith("#"):
@@ -367,7 +364,7 @@ def _(alt):
                 raise ValueError("Invalid color shorthand '#'. Use '#red' or a hex color like '#ff0000'.")
             return None, color[1:]
 
-        return color, color_value
+        return color, None
 
 
     def _strip_top_level_only_props(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
@@ -495,7 +492,6 @@ def _(alt):
         *,
         # Aesthetics
         color: str | None = None,
-        color_value: str | None = None,
         size: str | None = None,
         opacity: float | str = 0.7,
         group: str | None = None,
@@ -532,7 +528,6 @@ def _(alt):
         **Aesthetics**
         - `color` — column to map to color.
           Use `"#red"` for a fixed named color value, or `"#ff0000"` for a fixed hex color.
-        - `color_value` — fixed color for all marks (e.g. `"red"` or `"#e15759"`).
         - `size` — column to map to point size.
         - `opacity` — a fixed float (e.g. `0.5`) or a column name.
         - `group` — column to group by *without* changing color.
@@ -564,7 +559,7 @@ def _(alt):
             raise ValueError(f"Unknown theme: {theme}")
 
         _ensure_hasty_hooks()
-        color, color_value = _coerce_color(color, color_value)
+        color, const_color = _coerce_color(color)
 
         chart = alt.Chart(data)
 
@@ -620,8 +615,8 @@ def _(alt):
         # Optional encodings
         if color is not None:
             chart = chart.encode(color=alt.Color(color, title=_clean_label(color)))
-        elif color_value is not None:
-            chart = chart.encode(color=alt.value(color_value))
+        elif const_color is not None:
+            chart = chart.encode(color=alt.value(const_color))
         if size is not None:
             chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
         if isinstance(opacity, str):
@@ -649,8 +644,8 @@ def _(alt):
                 )
             if color is not None:
                 trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
-            elif color_value is not None:
-                trend = trend.encode(color=alt.value(color_value))
+            elif const_color is not None:
+                trend = trend.encode(color=alt.value(const_color))
             chart = chart + trend
 
         # Width and height (applied per facet panel or to whole chart)
@@ -854,12 +849,12 @@ def _(alt, df_test, qplot):
         spec = qplot(df_test, "x", "y", color="#ff0000").to_dict()
         assert spec["encoding"]["color"]["value"] == "#ff0000"
 
-    def test_color_and_color_value_conflict_raises():
+    def test_invalid_color_shorthand_raises():
         try:
-            qplot(df_test, "x", "y", color="c", color_value="red")
+            qplot(df_test, "x", "y", color="#")
             assert False, "Should have raised"
         except ValueError as e:
-            assert "either 'color' or 'color_value'" in str(e)
+            assert "Invalid color shorthand" in str(e)
 
 
     def test_size_encoding():
