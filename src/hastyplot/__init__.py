@@ -7,12 +7,10 @@ import re
 import weakref
 from typing import Any
 
-
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 # Metadata lives outside Altair schema objects so it never leaks into Vega-Lite output.
 # We key by `id(chart)` because Altair chart objects are not hashable.
 _HASTY_META: dict[int, tuple[weakref.ReferenceType, str, bool]] = {}
-
 
 def _meta_for(chart: Any) -> tuple[str, bool] | None:
     # Guard against id reuse: only return metadata if the weakref still points to this exact object.
@@ -25,11 +23,9 @@ def _meta_for(chart: Any) -> tuple[str, bool] | None:
         return None
     return theme, actions
 
-
 def _clean_label(name):
     """Lowercase and replace -/_ with spaces."""
     return name.replace("_", " ").replace("-", " ").lower()
-
 
 def _merge_theme(left: str, right: str) -> str:
     if left == right:
@@ -38,8 +34,9 @@ def _merge_theme(left: str, right: str) -> str:
         return right
     if right == "default":
         return left
-    raise ValueError(f"Cannot combine charts with different non-default themes: '{left}' and '{right}'")
-
+    raise ValueError(
+        f"Cannot combine charts with different non-default themes: '{left}' and '{right}'"
+    )
 
 def _coerce_color(color: str | None) -> tuple[str | None, str | None]:
     if color is None:
@@ -50,11 +47,12 @@ def _coerce_color(color: str | None) -> tuple[str | None, str | None]:
         if _HEX_COLOR_RE.fullmatch(color):
             return None, color
         if len(color) == 1:
-            raise ValueError("Invalid color shorthand '#'. Use '#red' or a hex color like '#ff0000'.")
+            raise ValueError(
+                "Invalid color shorthand '#'. Use '#red' or a hex color like '#ff0000'."
+            )
         return None, color[1:]
 
     return color, None
-
 
 def _strip_top_level_only_props(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     stripped = chart.copy(deep=True)
@@ -64,25 +62,22 @@ def _strip_top_level_only_props(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
         stripped.usermeta = alt.Undefined
     return stripped
 
-
 def _is_hasty(chart: Any) -> bool:
     return _meta_for(chart) is not None
-
 
 def _hasty_theme(chart: Any) -> str:
     meta = _meta_for(chart)
     return meta[0] if meta is not None else "default"
 
-
 def _hasty_actions(chart: Any) -> bool:
     meta = _meta_for(chart)
     return meta[1] if meta is not None else False
 
-
-def _attach_hasty(chart: alt.TopLevelMixin, *, theme: str, actions: bool) -> alt.TopLevelMixin:
+def _attach_hasty(
+    chart: alt.TopLevelMixin, *, theme: str, actions: bool
+) -> alt.TopLevelMixin:
     _HASTY_META[id(chart)] = (weakref.ref(chart), theme, actions)
     return chart
-
 
 def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     if not _is_hasty(chart):
@@ -90,16 +85,16 @@ def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     # Apply top-level-only settings late, right before serialization/render.
     finalized = chart.copy(deep=True)
     finalized = _apply_theme(finalized, _hasty_theme(chart))
-    finalized = finalized.properties(usermeta={"embedOptions": {"actions": _hasty_actions(chart)}})
+    finalized = finalized.properties(
+        usermeta={"embedOptions": {"actions": _hasty_actions(chart)}}
+    )
     return finalized
-
 
 def _prepare_child(chart: Any) -> Any:
     # In composed charts, children may not carry top-level fields like `config` or `usermeta`.
     if _is_hasty(chart):
         return _strip_top_level_only_props(chart)
     return chart
-
 
 def _ensure_hasty_hooks() -> None:
     # Install once per process: qplot charts carry deferred metadata, plain Altair charts do not.
@@ -173,7 +168,6 @@ def _ensure_hasty_hooks() -> None:
     alt.TopLevelMixin._repr_mimebundle_ = patched_repr
     setattr(alt.TopLevelMixin, "_hasty_hooks_installed", True)
 
-
 def qplot(
     data,
     x: str,
@@ -202,7 +196,7 @@ def qplot(
     y_lim: tuple[float | None, float | None] | None = None,
     title: str | None = None,
     subtitle: str | None = None,
-    theme: str = "default",
+    theme: str = "minimal",
     actions: bool = False,
 ) -> alt.TopLevelMixin:
     """Quick plot for Altair. Inspired by ggplot2's qplot.
@@ -263,7 +257,12 @@ def qplot(
     y_scale = alt.Scale(domain=list(y_lim)) if y_lim is not None else alt.Undefined
     _clip = x_lim is not None or y_lim is not None
     if mark == "hist":
-        x_enc = alt.X(x, bin=alt.Bin(maxbins=bins) if bins is not None else True, title=_clean_label(x), scale=x_scale)
+        x_enc = alt.X(
+            x,
+            bin=alt.Bin(maxbins=bins) if bins is not None else True,
+            title=_clean_label(x),
+            scale=x_scale,
+        )
         y_enc = alt.Y("count()", title="count", scale=y_scale)
     elif mark == "rect":
         x_enc = alt.X(x, type="ordinal", title=_clean_label(x), scale=x_scale)
@@ -275,11 +274,14 @@ def qplot(
     # Build the mark + encoding
     if mark == "scatter":
         chart = chart.mark_point(
-            filled=True, opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
+            filled=True,
+            opacity=opacity if isinstance(opacity, (int, float)) else 0.7,
+            clip=_clip,
         ).encode(x=x_enc, y=y_enc)
     elif mark == "circle":
         chart = chart.mark_circle(
-            opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
+            opacity=opacity if isinstance(opacity, (int, float)) else 0.7,
+            clip=_clip,
         ).encode(x=x_enc, y=y_enc)
     elif mark == "hist":
         chart = chart.mark_bar(clip=_clip).encode(x=x_enc, y=y_enc)
@@ -291,10 +293,13 @@ def qplot(
         chart = chart.mark_rect(clip=_clip).encode(x=x_enc, y=y_enc)
     elif mark == "area":
         chart = chart.mark_area(
-            opacity=opacity if isinstance(opacity, (int, float)) else 0.7, clip=_clip
+            opacity=opacity if isinstance(opacity, (int, float)) else 0.7,
+            clip=_clip,
         ).encode(x=x_enc, y=y_enc)
     elif mark == "step":
-        chart = chart.mark_line(interpolate="step", strokeWidth=2, clip=_clip).encode(x=x_enc, y=y_enc)
+        chart = chart.mark_line(
+            interpolate="step", strokeWidth=2, clip=_clip
+        ).encode(x=x_enc, y=y_enc)
     elif mark == "boxplot":
         chart = chart.mark_boxplot(clip=_clip).encode(x=x_enc, y=y_enc)
     else:
@@ -312,7 +317,9 @@ def qplot(
     if size is not None:
         chart = chart.encode(size=alt.Size(size, title=_clean_label(size)))
     if isinstance(opacity, str):
-        chart = chart.encode(opacity=alt.Opacity(opacity, title=_clean_label(opacity)))
+        chart = chart.encode(
+            opacity=alt.Opacity(opacity, title=_clean_label(opacity))
+        )
     if tooltip is not None:
         chart = chart.encode(
             tooltip=[alt.Tooltip(col, title=_clean_label(col)) for col in tooltip]
@@ -324,15 +331,25 @@ def qplot(
         groupby = [color] if color is not None else []
         if smooth == "loess":
             trend = (
-                smooth_base.transform_loess(x, y, groupby=groupby, bandwidth=bandwidth)
+                smooth_base.transform_loess(
+                    x, y, groupby=groupby, bandwidth=bandwidth
+                )
                 .mark_line(strokeWidth=3, opacity=0.9, clip=_clip)
-                .encode(x=alt.X(x, title=_clean_label(x), scale=x_scale), y=alt.Y(y, title=_clean_label(y), scale=y_scale))
+                .encode(
+                    x=alt.X(x, title=_clean_label(x), scale=x_scale),
+                    y=alt.Y(y, title=_clean_label(y), scale=y_scale),
+                )
             )
         else:
             trend = (
-                smooth_base.transform_regression(x, y, method=smooth, groupby=groupby)
+                smooth_base.transform_regression(
+                    x, y, method=smooth, groupby=groupby
+                )
                 .mark_line(strokeWidth=3, opacity=0.9, clip=_clip)
-                .encode(x=alt.X(x, title=_clean_label(x), scale=x_scale), y=alt.Y(y, title=_clean_label(y), scale=y_scale))
+                .encode(
+                    x=alt.X(x, title=_clean_label(x), scale=x_scale),
+                    y=alt.Y(y, title=_clean_label(y), scale=y_scale),
+                )
             )
         if color is not None:
             trend = trend.encode(color=alt.Color(color, title=_clean_label(color)))
@@ -361,7 +378,9 @@ def qplot(
             row=alt.Row(facet_row, title=_clean_label(facet_row)),
         )
     elif facet_col is not None:
-        chart = chart.facet(column=alt.Column(facet_col, title=_clean_label(facet_col)))
+        chart = chart.facet(
+            column=alt.Column(facet_col, title=_clean_label(facet_col))
+        )
     elif facet_row is not None:
         chart = chart.facet(row=alt.Row(facet_row, title=_clean_label(facet_row)))
 
@@ -375,9 +394,7 @@ def qplot(
 
     return _attach_hasty(chart, theme=theme, actions=actions)
 
-
 _TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
-
 
 def _apply_theme(chart, theme):
     if theme == "default":
