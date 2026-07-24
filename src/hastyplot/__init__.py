@@ -1,4 +1,4 @@
-__all__ = ['qplot']
+__all__ = ['qplot', 'annotate']
 
 
 import altair as alt
@@ -78,6 +78,100 @@ def _attach_hasty(
 ) -> alt.TopLevelMixin:
     _HASTY_META[id(chart)] = (weakref.ref(chart), theme, actions)
     return chart
+
+_TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
+
+def _apply_theme(chart, theme):
+    if theme == "default":
+        return chart
+    elif theme == "clean":
+        return (
+            chart.configure_axis(
+                grid=False,
+                domainColor="#333",
+                tickColor="#333",
+                labelFontSize=11,
+                titleFontSize=12,
+                titleFont="system-ui",
+                labelFont="system-ui",
+                labelColor="#555",
+                titleColor="#333",
+            )
+            .configure_view(strokeWidth=0)
+            .configure_title(
+                fontSize=18,
+                fontWeight="bold",
+                font="system-ui",
+                subtitleFont="system-ui",
+                subtitleFontSize=13,
+                subtitleColor="#666",
+                color="currentColor",
+                **_TITLE_COMMON,
+            )
+            .configure_legend(
+                labelFont="system-ui",
+                titleFont="system-ui",
+                labelFontSize=11,
+                titleFontSize=11,
+                symbolSize=80,
+            )
+        )
+    elif theme == "minimal":
+        return (
+            chart.configure_axis(
+                grid=True,
+                gridColor="#e5e5e5",
+                gridWidth=0.5,
+                domain=False,
+                tickSize=0,
+                labelFontSize=11,
+                titleFontSize=11,
+                titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                labelColor="#666",
+                titleColor="#666",
+                titleFontWeight="normal",
+                labelPadding=8,
+            )
+            .configure_view(strokeWidth=0)
+            .configure_title(
+                fontSize=20,
+                fontWeight=700,
+                font="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                color="currentColor",
+                subtitleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                subtitleFontSize=14,
+                subtitleColor="#888",
+                subtitleFontWeight="normal",
+                subtitlePadding=4,
+                **_TITLE_COMMON,
+            )
+            .configure_legend(
+                labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
+                labelFontSize=11,
+                titleFontSize=11,
+                titleFontWeight="normal",
+                symbolSize=80,
+                orient="bottom",
+            )
+            .configure_range(
+                category=[
+                    "#e15759",
+                    "#4e79a7",
+                    "#f28e2b",
+                    "#76b7b2",
+                    "#59a14f",
+                    "#edc948",
+                    "#b07aa1",
+                    "#ff9da7",
+                    "#9c755f",
+                    "#bab0ac",
+                ]
+            )
+        )
+    else:
+        raise ValueError(f"Unknown theme: {theme}")
 
 def _finalize_hasty(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     if not _is_hasty(chart):
@@ -394,96 +488,139 @@ def qplot(
 
     return _attach_hasty(chart, theme=theme, actions=actions)
 
-_TITLE_COMMON = dict(anchor="start", offset=10, dx=40)
+import datetime as _dt
 
-def _apply_theme(chart, theme):
-    if theme == "default":
-        return chart
-    elif theme == "clean":
-        return (
-            chart.configure_axis(
-                grid=False,
-                domainColor="#333",
-                tickColor="#333",
-                labelFontSize=11,
-                titleFontSize=12,
-                titleFont="system-ui",
-                labelFont="system-ui",
-                labelColor="#555",
-                titleColor="#333",
-            )
-            .configure_view(strokeWidth=0)
-            .configure_title(
-                fontSize=18,
-                fontWeight="bold",
-                font="system-ui",
-                subtitleFont="system-ui",
-                subtitleFontSize=13,
-                subtitleColor="#666",
-                color="currentColor",
-                **_TITLE_COMMON,
-            )
-            .configure_legend(
-                labelFont="system-ui",
-                titleFont="system-ui",
-                labelFontSize=11,
-                titleFontSize=11,
-                symbolSize=80,
-            )
-        )
-    elif theme == "minimal":
-        return (
-            chart.configure_axis(
-                grid=True,
-                gridColor="#e5e5e5",
-                gridWidth=0.5,
-                domain=False,
-                tickSize=0,
-                labelFontSize=11,
-                titleFontSize=11,
-                titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                labelColor="#666",
-                titleColor="#666",
-                titleFontWeight="normal",
-                labelPadding=8,
-            )
-            .configure_view(strokeWidth=0)
-            .configure_title(
-                fontSize=20,
-                fontWeight=700,
-                font="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                color="currentColor",
-                subtitleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                subtitleFontSize=14,
-                subtitleColor="#888",
-                subtitleFontWeight="normal",
-                subtitlePadding=4,
-                **_TITLE_COMMON,
-            )
-            .configure_legend(
-                labelFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                titleFont="'Libre Franklin', 'Helvetica Neue', sans-serif",
-                labelFontSize=11,
-                titleFontSize=11,
-                titleFontWeight="normal",
-                symbolSize=80,
-                orient="bottom",
-            )
-            .configure_range(
-                category=[
-                    "#e15759",
-                    "#4e79a7",
-                    "#f28e2b",
-                    "#76b7b2",
-                    "#59a14f",
-                    "#edc948",
-                    "#b07aa1",
-                    "#ff9da7",
-                    "#9c755f",
-                    "#bab0ac",
-                ]
-            )
-        )
+# A warning-badge glyph as a Vega symbol path: centered at the origin and
+# normalized so its circle fills the [-0.5, 0.5] box (so `size` behaves like
+# any other marker instead of rendering at ~half footprint). The exclamation
+# mark is a cut-out, so a white backing circle behind it makes the "!" read
+# as white regardless of what's under the marker.
+_WARNING_ICON = (
+    "m0 -0.5c0.27478 0 0.5 0.22283 0.5 0.5 0 0.27478 -0.22522 0.5 -0.5 0.5"
+    " -0.27735 0 -0.50009 -0.22522 -0.50009 -0.5 0 -0.27719 0.22274 -0.5"
+    " 0.50009 -0.5zm0 0.70795c-0.03226 0 -0.05936 0.02719 -0.05936 0.05945"
+    " 0 0.03218 0.0271 0.05936 0.05936 0.05936 0.00025 0 0.05936 -0.02719"
+    " 0.05936 -0.05936 -0.00008 -0.03218 -0.02727 -0.05945 -0.05936"
+    " -0.05945zm0.08655 -0.43815c0.0123 -0.13111 -0.18574 -0.1287 -0.17327"
+    " 0l0.02719 0.31444c0.00491 0.04207 0.0123 0.05687 0.05936 0.05687"
+    " 0.00086 0 0.05446 -0.0148 0.05687 -0.05687z"
+)
+
+def _vega_type(v):
+    """Infer a Vega-Lite type ('T'/'Q'/'N') from a Python scalar."""
+    if isinstance(v, bool):
+        return "N"
+    if isinstance(v, (int, float)):
+        return "Q"
+    if isinstance(v, (_dt.datetime, _dt.date)):
+        return "T"
+    # Duck-type pandas.Timestamp / anything date-like without importing pandas.
+    if hasattr(v, "isoformat"):
+        return "T"
+    if isinstance(v, str):
+        try:
+            _dt.datetime.fromisoformat(v)
+            return "T"
+        except ValueError:
+            return "N"
+    return "N"
+
+def _iso(v):
+    """Emit temporal values as ISO strings (Vega-Lite reads those for T)."""
+    return v.isoformat() if hasattr(v, "isoformat") else v
+
+def annotate(
+    x,
+    y=None,
+    note=None,
+    label=None,
+    *,
+    rule=None,
+    marker=True,
+    marker_size=1000,
+    color="#666666",
+    line_color=None,
+    marker_color=None,
+    label_size=13,
+):
+    """Return an Altair annotation layer to `+` onto a chart.
+
+    Because `hastyplot` patches Altair's `+`, this plain layer composes with a
+    `qplot` base *and* inherits its theme automatically — nothing special needed.
+
+    Two modes, chosen by whether `y` is given:
+
+    - `annotate(x)` — "something happened at this x/time". Draws a dashed
+      vertical rule at `x` and pins an info-circle to the top of the panel.
+    - `annotate(x, y)` — "call out this point". Places the info-circle on the
+      `(x, y)` data coordinate; the vertical rule defaults off.
+
+    **Position**
+    - `x` — the x value to annotate. Its Vega-Lite type is inferred
+      (datetime/ISO-string → temporal, number → quantitative, other string →
+      nominal), so this works on time-series and scatter charts alike.
+    - `y` — optional y value. When given, the marker sits on the data point.
+
+    **Content**
+    - `note` — text shown on hover.
+    - `label` — short text pinned next to the info-circle.
+
+    **Appearance**
+    - `rule` — draw a dashed vertical line at `x`. Defaults to `True` when `y`
+      is omitted, `False` when a point is given.
+    - `marker` — draw a hoverable info-circle.
+    - `marker_size` — size of the info-circle glyph.
+    - `label_size` — font size of the pinned `label` text (default `13`).
+    - `color` — default color for both the line and the marker.
+    - `line_color` / `marker_color` — override the rule / info-circle color
+      (each falls back to `color`).
+    """
+    if rule is None:
+        rule = y is None
+    line_color = line_color or color
+    marker_color = marker_color or color
+
+    xt = _vega_type(x)
+    cols = {"x": _iso(x), "note": note or "", "label": label or ""}
+    x_enc = f"x:{xt}"
+
+    if y is None:
+        # Pin to the top of the panel in pixels, independent of the y-scale.
+        y_enc = alt.value(12)
     else:
-        raise ValueError(f"Unknown theme: {theme}")
+        yt = _vega_type(y)
+        cols["y"] = _iso(y)
+        y_enc = f"y:{yt}"
+
+    data = alt.InlineData(values=[cols])
+    tip = [alt.Tooltip("note:N", title="note")] if note else alt.Undefined
+    layers = []
+
+    if rule:
+        layers.append(
+            alt.Chart(data)
+            .mark_rule(strokeDash=[4, 4], color=line_color, size=1.5)
+            .encode(x=x_enc, tooltip=tip)
+        )
+
+    if marker:
+        # White backing so the exclamation cut-out reads as white.
+        layers.append(
+            alt.Chart(data)
+            .mark_point(shape="circle", filled=True, color="white", size=marker_size * 0.75, opacity=1)
+            .encode(x=x_enc, y=y_enc, tooltip=tip)
+        )
+        # The warning badge itself (a custom Vega symbol path).
+        layers.append(
+            alt.Chart(data)
+            .mark_point(shape=_WARNING_ICON, filled=True, color=marker_color, size=marker_size, opacity=1)
+            .encode(x=x_enc, y=y_enc, tooltip=tip)
+        )
+        if label:
+            layers.append(
+                alt.Chart(data)
+                .mark_text(align="left", baseline="middle", dx=marker_size ** 0.5 * 0.5 + 1, color=marker_color, fontSize=label_size)
+                .encode(x=x_enc, y=y_enc, text="label:N", tooltip=tip)
+            )
+
+    return alt.layer(*layers)
