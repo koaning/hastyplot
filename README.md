@@ -81,9 +81,57 @@ qplot(df, "x", "y", theme="clean")
 - **`"clean"`** — No gridlines, dark axis colors, `system-ui` fonts, bold title.
 - **`"minimal"`** — Light gridlines, no axis domain lines, Libre Franklin / Helvetica Neue fonts, bottom-oriented legend, and a custom color palette.
 
+## Annotations
+
+`hastyplot` also ships an `annotate` helper. It returns a plain Altair layer you
+`+` onto any chart. Because `hastyplot` patches Altair's `+`, an annotation
+composed onto a `qplot` base inherits its theme automatically — nothing special
+needed.
+
+```python
+from hastyplot import qplot, annotate
+
+# Mark a moment in time: dashed rule + hoverable warning badge
+qplot(stocks, "date", "price", mark="line") + annotate(
+    "2008-10-01", note="financial crisis", label="crash"
+)
+
+# Call out a specific point (pass a y): the badge lands on the data coordinate
+qplot(cars, "Horsepower", "Miles_per_Gallon") + annotate(
+    250, 15, note="most powerful", label="outlier"
+)
+```
+
+Two modes, chosen by whether `y` is given:
+
+- `annotate(x)` — draws a dashed vertical rule at `x` and pins the info-circle to
+  the top of the panel.
+- `annotate(x, y)` — places the info-circle on the `(x, y)` data coordinate; the
+  rule defaults off.
+
+The Vega-Lite type of `x` (and `y`) is inferred — datetime/ISO-string → temporal,
+number → quantitative, other string → nominal — so it works on time-series and
+scatter charts alike.
+
+**Parameters**
+- `x` — the x value to annotate.
+- `y` — optional y value. When given, the marker sits on the data point.
+- `note` — text shown on hover.
+- `label` — short text pinned next to the info-circle.
+- `rule` — draw a dashed vertical line at `x`. Defaults to `True` when `y` is
+  omitted, `False` when a point is given.
+- `marker` — draw a hoverable info-circle (default `True`).
+- `marker_size` — size of the info-circle glyph (default `700`).
+- `label_size` — font size of the pinned `label` text (default `13`).
+- `color` — default color for both the line and the marker.
+- `line_color` / `marker_color` — override the rule / info-circle color
+  (each falls back to `color`).
+
 ## `API`
 
-There is only one function and it is called `qplot`. In this function `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`. Here's all the input options:
+`hastyplot` exposes two functions: `qplot` (below) and `annotate` (above). In
+`qplot`, `data` is the first argument so you can use `df.pipe(qplot, "x", "y")`.
+Here's all the input options:
 
 **Data & axes**
 - `data` — DataFrame to plot.
