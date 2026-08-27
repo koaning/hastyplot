@@ -328,7 +328,7 @@ def qplot(
     - `width` / `height` — chart size in pixels (per panel when faceted).
     - `x_lim` / `y_lim` — tuple of (min, max) to set axis limits.
       Either side can be `None` to keep it automatic, e.g. `(None, 100)`.
-    - `title` / `subtitle` — chart title and subtitle.
+    - `title` / `subtitle` — chart title and subtitle. subtitle should be short sentence. long explainers go elsewhere.
     - `theme` — `"default"`, `"clean"`, or `"minimal"`.
     - `actions` — show the Vega-Lite export menu (default `False`).
     """
